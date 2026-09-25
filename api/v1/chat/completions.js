@@ -20,12 +20,10 @@ export default async function handler(req) {
     // 1. Cek API Key di Vercel Global Config
     const keyData = await get(clientApiKey);
 
-    // Validasi fleksibel: Jika key tidak ada atau bernilai false
     if (keyData === undefined || keyData === null || keyData === false) {
       return new Response(JSON.stringify({ error: 'API Key tidak valid atau dinonaktifkan.' }), { status: 401 });
     }
 
-    // Jika simpan data berbentuk objek { active: true, quota: 100 }
     if (typeof keyData === 'object' && keyData !== null) {
       if (keyData.active === false) {
         return new Response(JSON.stringify({ error: 'API Key dinonaktifkan.' }), { status: 401 });
@@ -37,22 +35,31 @@ export default async function handler(req) {
 
     const body = await req.json();
 
-    // Mapping Alias Model
+    // 2. Normalisasi & Mapping Alias Model (Case-Insensitive)
+    const rawModel = (body.model || '').toLowerCase();
     let targetModelAlias = "Axynity-Xcode";
-    if (body.model === "Axynity-M1" || body.model === "axynity-m1" || body.model === "Axynity flash") {
+
+    if (rawModel.includes("m1") || rawModel.includes("flash")) {
       targetModelAlias = "Axynity-M1";
     }
 
-    // 2. Inject System Prompt
+    // Pilihan streaming mengikuti request client (default: false jika tidak ada)
+    const isStream = Boolean(body.stream);
+    body.stream = isStream;
+
+    // 3. Inject System Prompt yang Lebih Natural
     const customSystemPrompt = {
       role: "system",
-      content: `Kamu adalah ${targetModelAlias}, model AI canggih yang dikembangkan oleh Axynera dari Indonesia.
+      content: `Kamu adalah ${targetModelAlias}, asisten AI cerdas dan serbaguna yang dikembangkan oleh Axynera.
 
-ATURAN RESPON:
-1. LANGSUNG FOKUS: Jawab pertanyaan user secara langsung, lugas, dan profesional. DILARANG memperkenalkan diri, menyebut nama developer, atau membawa nama lokasi secara spontan jika tidak ditanya.
-2. PENGATURAN BAHASA: Gunakan Bahasa Indonesia yang jelas dan alami (atau Bahasa Inggris jika user bertanya dalam bahasa Inggris). DILARANG KERAS mengeluarkan karakter/aksara Cina (Hanzi) atau bahasa asing lain.
-3. IDENTITAS (Hanya Jika Ditanya): JIKA DAN HANYA JIKA user bertanya tentang identitas, asal-usul, pembuat, atau lokasi pengembanganmu, jawablah bahwa kamu adalah ${targetModelAlias} yang dikembangkan oleh Axynera dari Indonesia. Dilarang menyebut vendor lain (seperti OpenAI, Anthropic, Google, DeepSeek, Ciora, MiniMax).
-4. KODE WEB & THINKING: Jika membahas perbaikan atau pembuatan kode web (HTML/CSS/JS/PHP/React), fokuskan proses pemikiran (thinking) murni pada analisis bug, sintaks, dan optimasi kode secara teknis.`
+PANDUAN BERKOMUNIKASI:
+1. GAYA BAHASA: Gunakan Bahasa Indonesia yang natural, hangat, ramah, dan komunikatif (atau Bahasa Inggris sesuai bahasa pengguna). Jangan kaku seperti robot.
+2. JAWABAN FOKUS: Utamakan langsung menjawab inti pertanyaan pengguna dengan jelas dan solutif. Jangan membawa-bawa identitas atau pembuat secara otomatis jika tidak ditanyakan.
+3. IDENTITAS & DEVELOPER:
+   - Jika pengguna bertanya tentang siapa kamu, siapa pembuatmu, atau dari mana asalmmu, jawablah dengan santai dan bangga bahwa kamu adalah model AI ${targetModelAlias} ciptaan Axynera, tim/pengembang dari Indonesia.
+   - DILARANG KERAS menyebutkan atau mengaitkan dirimu dengan vendor/model lain (seperti OpenAI, Anthropic, Google, DeepSeek, ChatGPT, Claude, atau Gemini).
+4. FILTER BAHASA: HANYA gunakan karakter latin/alfabet biasa. DILARANG KERAS menampilkan aksara Cina/Hanzi (汉字) atau simbol asing yang tidak perlu.
+5. PENULISAN KODE: Jika pengguna meminta bantuan pemrograman, fokuskan analisa pada logika, arsitektur kode yang bersih, dan perbaikan bug secara teknis.`
     };
 
     if (body.messages && Array.isArray(body.messages)) {
@@ -61,9 +68,7 @@ ATURAN RESPON:
       body.messages = [customSystemPrompt];
     }
 
-    body.stream = true;
-
-    // 3. Request ke Upstream 9Router
+    // 4. Request ke Upstream 9Router
     const NINEROUTER_URL = process.env.NINEROUTER_URL || 'https://router.nextura.my.id/v1/chat/completions';
     const NINEROUTER_KEY = process.env.NINEROUTER_KEY || 'sk-ee154e57bedea543-a8o084-89b677ad';
 
@@ -80,7 +85,37 @@ ATURAN RESPON:
       return new Response(await upstreamResponse.text(), { status: upstreamResponse.status });
     }
 
-    // 4. TransformStream & Heartbeat Ping
+    // -------------------------------------------------------------
+    // PENANGANAN 1: NON-STREAMING RESPONSE (JSON biasa)
+    // -------------------------------------------------------------
+    if (!isStream) {
+      const data = await upstreamResponse.json();
+
+      // Timpa identitas & model
+      data.model = targetModelAlias;
+      data.developer = "Axynera";
+      data.origin = "Indonesia";
+
+      if (data.choices && Array.isArray(data.choices)) {
+        data.choices.forEach(choice => {
+          if (choice.message && choice.message.content) {
+            // Filter karakter Hanzi dan ganti nama vendor
+            choice.message.content = choice.message.content
+              .replace(/[\u4e00-\u9fa5]+/g, '')
+              .replace(/(OpenAI|Anthropic|Google|DeepSeek|ChatGPT|Claude)/gi, "Axynera");
+          }
+        });
+      }
+
+      return new Response(JSON.stringify(data), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // -------------------------------------------------------------
+    // PENANGANAN 2: STREAMING RESPONSE (SSE)
+    // -------------------------------------------------------------
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
     let heartbeatInterval;
@@ -95,8 +130,9 @@ ATURAN RESPON:
       transform(chunk, controller) {
         let text = decoder.decode(chunk, { stream: true });
 
-        // Filter Karakter Cina (Hanzi)
+        // Filter Hanzi (Cina) & ganti string model upstream secara kasar di seluruh teks
         text = text.replace(/[\u4e00-\u9fa5]+/g, '');
+        text = text.replace(/"model":\s*"[^"]+"/g, `"model":"${targetModelAlias}"`);
 
         const lines = text.split('\n');
         const processedLines = lines.map(line => {
@@ -111,17 +147,17 @@ ATURAN RESPON:
 
               if (data.choices && data.choices[0]?.delta?.reasoning_content) {
                 data.choices[0].delta.reasoning_content = data.choices[0].delta.reasoning_content
-                  .replace(/(OpenAI|Anthropic|Google|DeepSeek|Ciora|MiniMax)/gi, "Axynera AI Engine");
+                  .replace(/(OpenAI|Anthropic|Google|DeepSeek|ChatGPT|Claude)/gi, "Axynera Engine");
               }
 
               if (data.choices && data.choices[0]?.delta?.content) {
                 data.choices[0].delta.content = data.choices[0].delta.content
-                  .replace(/(OpenAI|Anthropic|Google|DeepSeek|Ciora|MiniMax)/gi, "Axynera");
+                  .replace(/(OpenAI|Anthropic|Google|DeepSeek|ChatGPT|Claude)/gi, "Axynera");
               }
 
               return `data: ${JSON.stringify(data)}`;
             } catch (e) {
-              return line.replace(/"model":\s*"[^"]+"/g, `"model":"${targetModelAlias}"`);
+              return line;
             }
           }
           return line;
