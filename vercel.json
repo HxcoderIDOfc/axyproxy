@@ -1,14 +1,4 @@
 {
-  "functions": {
-    "api/v1/chat/completions.js": {
-      "maxDuration": 30,
-      "memory": 1024
-    },
-    "api/v1/messages.js": {
-      "maxDuration": 30,
-      "memory": 1024
-    }
-  },
   "routes": [
     { "src": "/v1/chat/completions", "dest": "/api/v1/chat/completions.js" },
     { "src": "/v1/messages", "dest": "/api/v1/messages.js" },
