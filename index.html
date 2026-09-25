@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axynera Gateway | System Status</title>
+    <style>
+        :root {
+            --bg-base: #09090b;
+            --bg-card: #18181b;
+            --border: #27272a;
+            --text-main: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --success: #10b981;
+            --error: #ef4444;
+            --font-main: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .dashboard {
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .header {
+            margin-bottom: 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            margin-top: 4px;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            padding: 6px 12px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .pulse {
+            width: 8px;
+            height: 8px;
+            background-color: var(--success);
+            border-radius: 50%;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulse-ring 2s infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .model-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        .metrics {
+            display: flex;
+            gap: 24px;
+        }
+
+        .metric-item {
+            text-align: right;
+        }
+
+        .metric-value {
+            font-size: 1.125rem;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .canvas-wrapper {
+            width: 100%;
+            height: 40px;
+            position: relative;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Tombol test hanya untuk preview lokal, bisa dihapus nanti */
+        .dev-tools {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px dashed var(--border);
+            display: flex;
+            gap: 12px;
+        }
+
+        .dev-tools button {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .dev-tools button:hover {
+            border-color: var(--error);
+            color: var(--error);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard">
+        <div class="header">
+            <div>
+                <h1>Axynera Gateway</h1>
+                <p>9Router API System Status</p>
+            </div>
+            <div class="status-badge" id="global-status">
+                <div class="pulse"></div>
+                All Systems Operational
+            </div>
+        </div>
+
+        <!-- Card Axynity-M1 -->
+        <div class="model-card">
+            <div class="card-header">
+                <div class="card-title">Axynity-M1</div>
+                <div class="metrics">
+                    <div class="metric-item">
+                        <div class="metric-value" id="m1-ping">32ms</div>
+                        <div class="metric-label">Latency</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value" style="color: var(--success);" id="m1-health">100%</div>
+                        <div class="metric-label">Uptime</div>
+                    </div>
+                </div>
+            </div>
+            <div class="canvas-wrapper">
+                <canvas id="canvas-m1"></canvas>
+            </div>
+        </div>
+
+        <!-- Card Axynity-Xcode -->
+        <div class="model-card">
+            <div class="card-header">
+                <div class="card-title">Axynity-Xcode</div>
+                <div class="metrics">
+                    <div class="metric-item">
+                        <div class="metric-value" id="xcode-ping">45ms</div>
+                        <div class="metric-label">Latency</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value" style="color: var(--success);" id="xcode-health">100%</div>
+                        <div class="metric-label">Uptime</div>
+                    </div>
+                </div>
+            </div>
+            <div class="canvas-wrapper">
+                <canvas id="canvas-xcode"></canvas>
+            </div>
+        </div>
+
+        <!-- Dev tools simulasi (Boleh dihapus jika sudah naik produksi) -->
+        <div class="dev-tools">
+            <button onclick="forceError('m1')">Inject Error (M1)</button>
+            <button onclick="forceError('xcode')">Inject Error (Xcode)</button>
+        </div>
+    </div>
+
+    <script>
+        const MAX_BLOCKS = 15;
+        
+        // Data State untuk masing-masing model
+        const state = {
+            m1: {
+                pings: Array(MAX_BLOCKS).fill(1), // 1 = Sukses, 0 = Error
+                latencies: Array(MAX_BLOCKS).fill(30)
+            },
+            xcode: {
+                pings: Array(MAX_BLOCKS).fill(1),
+                latencies: Array(MAX_BLOCKS).fill(40)
+            }
+        };
+
+        function setupCanvas(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            // Menyesuaikan resolusi untuk layar retina/HD
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width * 2;
+            canvas.height = rect.height * 2;
+            const ctx = canvas.getContext('2d');
+            ctx.scale(2, 2);
+            return { canvas, ctx, width: rect.width, height: rect.height };
+        }
+
+        const m1Canvas = setupCanvas('canvas-m1');
+        const xcodeCanvas = setupCanvas('canvas-xcode');
+
+        function drawBlocks(ctx, width, height, pings) {
+            ctx.clearRect(0, 0, width, height);
+            
+            const gap = 6;
+            const totalGaps = gap * (MAX_BLOCKS - 1);
+            const blockWidth = (width - totalGaps) / MAX_BLOCKS;
+            const blockHeight = height;
+
+            pings.forEach((status, i) => {
+                const x = i * (blockWidth + gap);
+                
+                // Styling warna modern tanpa glow norak
+                if (status === 1) {
+                    ctx.fillStyle = "#10b981"; // Emerald
+                } else {
+                    ctx.fillStyle = "#ef4444"; // Rose/Red
+                }
+
+                // Kotak rounded (sisi tumpul)
+                ctx.beginPath();
+                if (ctx.roundRect) {
+                    ctx.roundRect(x, 0, blockWidth, blockHeight, 4);
+                } else {
+                    ctx.rect(x, 0, blockWidth, blockHeight);
+                }
+                ctx.fill();
+            });
+        }
+
+        function updateUI(modelId) {
+            const data = state[modelId];
+            
+            // Hitung Uptime
+            const successCount = data.pings.filter(p => p === 1).length;
+            const uptime = Math.round((successCount / MAX_BLOCKS) * 100);
+            const healthEl = document.getElementById(`${modelId}-health`);
+            healthEl.innerText = `${uptime}%`;
+            healthEl.style.color = uptime >= 80 ? 'var(--success)' : 'var(--error)';
+
+            // Update Ping Terbaru (Angka acak natural)
+            const basePing = modelId === 'm1' ? 30 : 45;
+            const isError = data.pings[MAX_BLOCKS - 1] === 0;
+            const currentPing = isError ? 'ERR' : Math.floor(basePing + (Math.random() * 15)) + 'ms';
+            const pingEl = document.getElementById(`${modelId}-ping`);
+            pingEl.innerText = currentPing;
+            pingEl.style.color = isError ? 'var(--error)' : 'var(--text-main)';
+        }
+
+        // Main Loop
+        setInterval(() => {
+            ['m1', 'xcode'].forEach(id => {
+                const data = state[id];
+                
+                // Normalnya 99% sukses
+                const isSuccess = Math.random() > 0.01 ? 1 : 0;
+                
+                data.pings.shift();
+                data.pings.push(isSuccess);
+
+                if (id === 'm1') drawBlocks(m1Canvas.ctx, m1Canvas.width, m1Canvas.height, data.pings);
+                if (id === 'xcode') drawBlocks(xcodeCanvas.ctx, xcodeCanvas.width, xcodeCanvas.height, data.pings);
+                
+                updateUI(id);
+            });
+        }, 1000); // 1 detik per shift
+
+        // Render perdana
+        drawBlocks(m1Canvas.ctx, m1Canvas.width, m1Canvas.height, state.m1.pings);
+        drawBlocks(xcodeCanvas.ctx, xcodeCanvas.width, xcodeCanvas.height, state.xcode.pings);
+        
+        // Handle Resize
+        window.addEventListener('resize', () => {
+            // Reload simple saat resize agar ukuran canvas presisi
+            location.reload(); 
+        });
+
+        // Fungsi manual error untuk tombol dev-tools
+        function forceError(modelId) {
+            state[modelId].pings[MAX_BLOCKS - 1] = 0;
+            const canvasObj = modelId === 'm1' ? m1Canvas : xcodeCanvas;
+            drawBlocks(canvasObj.ctx, canvasObj.width, canvasObj.height, state[modelId].pings);
+            updateUI(modelId);
+        }
+    </script>
+</body>
+</html>
