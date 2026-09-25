@@ -1,60 +1,60 @@
-import { kv } from '@vercel/kv';
+import { get } from '@vercel/global-config';
 
 export const config = {
   runtime: 'edge',
 };
 
 export default async function handler(req) {
+  // 1. Batasi method hanya POST
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
   }
 
-  // 1. Ekstrak API Key (Bisa dari header x-api-key milik Anthropic atau Authorization Bearer)
+  // 2. Ekstrak Header x-api-key milik Anthropic SDK
   const apiKeyHeader = req.headers.get('x-api-key') || req.headers.get('authorization')?.replace('Bearer ', '');
   if (!apiKeyHeader) {
     return new Response(JSON.stringify({
       type: "error",
-      error: { type: "authentication_error", message: "Header x-api-key atau Authorization wajib diisi" }
+      error: { type: "authentication_error", message: "Header x-api-key wajib diisi" }
     }), { status: 401 });
   }
 
   const clientApiKey = apiKeyHeader.trim();
 
   try {
-    // 2. Cek API Key & Kuota di Vercel KV
-    const keyData = await kv.get(`key:${clientApiKey}`);
-    if (!keyData || !keyData.active) {
+    // 3. Cek API Key di Vercel Global Config
+    const keyData = await get(clientApiKey);
+    if (!keyData || keyData.active === false) {
       return new Response(JSON.stringify({
         type: "error",
-        error: { type: "authentication_error", message: "API Key tidak valid atau nonaktif." }
+        error: { type: "authentication_error", message: "API Key tidak valid atau dinonaktifkan." }
       }), { status: 401 });
     }
 
-    if (keyData.quota <= 0) {
+    if (typeof keyData.quota === 'number' && keyData.quota <= 0) {
       return new Response(JSON.stringify({
         type: "error",
-        error: { type: "rate_limit_error", message: "Kuota API Key kamu telah habis." }
+        error: { type: "rate_limit_error", message: "Kuota API Key telah habis." }
       }), { status: 402 });
     }
 
     const body = await req.json();
 
-    // Mapping Nama Model Anthropic ke Brand Axynera
+    // Mapping Alias Model Anthropic
     let targetModelAlias = "Axynity-Xcode";
     if (body.model?.includes("haiku") || body.model === "Axynity-M1") {
       targetModelAlias = "Axynity-M1";
     }
 
-    // 3. Inject / Update System Prompt khusus Format Anthropic
+    // 4. Inject System Prompt khusus Format Anthropic
     const customSystemInstruction = `Kamu adalah ${targetModelAlias}, model AI canggih yang dikembangkan oleh Axynera dari Indonesia.
 
 ATURAN RESPON:
 1. LANGSUNG FOKUS: Jawab pertanyaan user secara langsung, lugas, dan profesional. DILARANG memperkenalkan diri, menyebut nama developer, atau membawa nama lokasi secara spontan jika tidak ditanya.
-2. PENGATURAN BAHASA: Gunakan Bahasa Indonesia yang jelas dan alami (atau Bahasa Inggris jika user bertanya dalam bahasa Inggris). DILARANG KERAS mengeluarkan karakter/aksara Cina (Hanzi) atau bahasa asing lain.
+2. PENGATURAN BAHASA: Gunakan Bahasa Indonesia yang jelas dan alami (or Bahasa Inggris jika user bertanya dalam bahasa Inggris). DILARANG KERAS mengeluarkan karakter/aksara Cina (Hanzi) atau bahasa asing lain.
 3. IDENTITAS (Hanya Jika Ditanya): JIKA DAN HANYA JIKA user bertanya tentang identitas, asal-usul, pembuat, atau lokasi pengembanganmu, jawablah bahwa kamu adalah ${targetModelAlias} yang dikembangkan oleh Axynera dari Indonesia. Dilarang menyebut vendor lain.
-4. KODE WEB & THINKING: Jika membahas perbaikan/pembuatan kode web (HTML/CSS/JS/PHP/React), fokuskan pemikiran (thinking) murni pada analisis bug dan optimasi kode.`;
+4. KODE WEB & THINKING: Jika membahas perbaikan atau pembuatan kode web (HTML/CSS/JS/PHP/React), fokuskan pemikiran (thinking) murni pada analisis bug dan optimasi kode.`;
 
-    // Gabungkan System Prompt bawaan client dengan milik Axynera
     if (body.system) {
       if (Array.isArray(body.system)) {
         body.system.unshift({ type: "text", text: customSystemInstruction });
@@ -67,7 +67,7 @@ ATURAN RESPON:
 
     body.stream = true;
 
-    // 4. Forward ke 9Router
+    // 5. Forward ke Upstream 9Router Gateway
     const NINEROUTER_URL = process.env.NINEROUTER_URL_ANTHROPIC || 'https://router.nextura.my.id/v1/messages';
     const NINEROUTER_KEY = process.env.NINEROUTER_KEY || 'sk-ee154e57bedea543-a8o084-89b677ad';
 
@@ -85,10 +85,7 @@ ATURAN RESPON:
       return new Response(await upstreamResponse.text(), { status: upstreamResponse.status });
     }
 
-    // Potong kuota (-1)
-    await kv.set(`key:${clientApiKey}`, { ...keyData, quota: keyData.quota - 1 });
-
-    // 5. TransformStream: Custom Event Stream Anthropic + Filter Hanzi/Vendor
+    // 6. TransformStream khusus Anthropic SSE Format
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
     let heartbeatInterval;
@@ -103,7 +100,7 @@ ATURAN RESPON:
       transform(chunk, controller) {
         let text = decoder.decode(chunk, { stream: true });
 
-        // Filter Karakter Cina (Hanzi)
+        // Filter Aksara Cina (Hanzi)
         text = text.replace(/[\u4e00-\u9fa5]+/g, '');
 
         // Rebrand Nama Model & Vendor
