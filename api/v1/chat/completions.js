@@ -5,12 +5,10 @@ export const config = {
 };
 
 export default async function handler(req) {
-  // 1. Batasi method hanya POST
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
   }
 
-  // 2. Ekstrak Bearer Token
   const authHeader = req.headers.get('authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return new Response(JSON.stringify({ error: 'Authorization header wajib diisi' }), { status: 401 });
@@ -19,7 +17,6 @@ export default async function handler(req) {
   const clientApiKey = authHeader.replace('Bearer ', '').trim();
 
   try {
-    // 3. Cek API Key & Kuota di Vercel Global Config
     const keyData = await get(clientApiKey);
     if (!keyData || keyData.active === false) {
       return new Response(JSON.stringify({ error: 'API Key tidak valid atau dinonaktifkan.' }), { status: 401 });
@@ -31,13 +28,11 @@ export default async function handler(req) {
 
     const body = await req.json();
 
-    // Mapping Alias Model Kustom
     let targetModelAlias = "Axynity-Xcode";
     if (body.model === "Axynity-M1" || body.model === "axynity-m1" || body.model === "Axynity flash") {
       targetModelAlias = "Axynity-M1";
     }
 
-    // 4. Inject System Prompt (Hanya Perkenalan Jika Ditanya)
     const customSystemPrompt = {
       role: "system",
       content: `Kamu adalah ${targetModelAlias}, model AI canggih yang dikembangkan oleh Axynera dari Indonesia.
@@ -57,7 +52,6 @@ ATURAN RESPON:
 
     body.stream = true;
 
-    // 5. Request ke Upstream 9Router Gateway
     const NINEROUTER_URL = process.env.NINEROUTER_URL || 'https://router.nextura.my.id/v1/chat/completions';
     const NINEROUTER_KEY = process.env.NINEROUTER_KEY || 'sk-ee154e57bedea543-a8o084-89b677ad';
 
@@ -74,14 +68,12 @@ ATURAN RESPON:
       return new Response(await upstreamResponse.text(), { status: upstreamResponse.status });
     }
 
-    // 6. TransformStream: Rebrand SSE + Clean Chinese & Vendor Filter + Heartbeat
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
     let heartbeatInterval;
 
     const stream = new TransformStream({
       start(controller) {
-        // Heartbeat Ping setiap 3 detik agar Vercel Edge tidak timeout
         heartbeatInterval = setInterval(() => {
           controller.enqueue(encoder.encode(': heartbeat ping\n\n'));
         }, 3000);
@@ -90,10 +82,8 @@ ATURAN RESPON:
       transform(chunk, controller) {
         let text = decoder.decode(chunk, { stream: true });
 
-        // Filter Aksara Cina (Hanzi)
         text = text.replace(/[\u4e00-\u9fa5]+/g, '');
 
-        // Rebrand Metadata JSON SSE
         const lines = text.split('\n');
         const processedLines = lines.map(line => {
           if (line.startsWith('data: ') && line !== 'data: [DONE]') {
@@ -105,13 +95,11 @@ ATURAN RESPON:
               data.developer = "Axynera";
               data.origin = "Indonesia";
 
-              // Clean Thinking / Reasoning Content
               if (data.choices && data.choices[0]?.delta?.reasoning_content) {
                 data.choices[0].delta.reasoning_content = data.choices[0].delta.reasoning_content
                   .replace(/(OpenAI|Anthropic|Google|DeepSeek|Ciora|MiniMax)/gi, "Axynera AI Engine");
               }
 
-              // Clean Main Content
               if (data.choices && data.choices[0]?.delta?.content) {
                 data.choices[0].delta.content = data.choices[0].delta.content
                   .replace(/(OpenAI|Anthropic|Google|DeepSeek|Ciora|MiniMax)/gi, "Axynera");
