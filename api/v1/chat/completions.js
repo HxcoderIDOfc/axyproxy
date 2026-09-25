@@ -1,15 +1,16 @@
-import { kv } from '@vercel/kv';
+import { get } from '@vercel/global-config';
 
 export const config = {
   runtime: 'edge',
 };
 
 export default async function handler(req) {
+  // 1. Batasi method hanya POST
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
   }
 
-  // 1. Validasi Authorization Header
+  // 2. Ekstrak Bearer Token
   const authHeader = req.headers.get('authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return new Response(JSON.stringify({ error: 'Authorization header wajib diisi' }), { status: 401 });
@@ -18,32 +19,32 @@ export default async function handler(req) {
   const clientApiKey = authHeader.replace('Bearer ', '').trim();
 
   try {
-    // 2. Cek API Key & Kuota Pengguna di Vercel KV Database
-    const keyData = await kv.get(`key:${clientApiKey}`);
-    if (!keyData || !keyData.active) {
-      return new Response(JSON.stringify({ error: 'API Key tidak valid atau telah dinonaktifkan.' }), { status: 401 });
+    // 3. Cek API Key & Kuota di Vercel Global Config
+    const keyData = await get(clientApiKey);
+    if (!keyData || keyData.active === false) {
+      return new Response(JSON.stringify({ error: 'API Key tidak valid atau dinonaktifkan.' }), { status: 401 });
     }
 
-    if (keyData.quota <= 0) {
-      return new Response(JSON.stringify({ error: 'Kuota API Key kamu telah habis.' }), { status: 402 });
+    if (typeof keyData.quota === 'number' && keyData.quota <= 0) {
+      return new Response(JSON.stringify({ error: 'Kuota API Key telah habis.' }), { status: 402 });
     }
 
     const body = await req.json();
 
-    // Mapping Alias Model
+    // Mapping Alias Model Kustom
     let targetModelAlias = "Axynity-Xcode";
     if (body.model === "Axynity-M1" || body.model === "axynity-m1" || body.model === "Axynity flash") {
       targetModelAlias = "Axynity-M1";
     }
 
-    // 3. Inject System Prompt (Natural & Kondisional)
+    // 4. Inject System Prompt (Hanya Perkenalan Jika Ditanya)
     const customSystemPrompt = {
       role: "system",
       content: `Kamu adalah ${targetModelAlias}, model AI canggih yang dikembangkan oleh Axynera dari Indonesia.
 
 ATURAN RESPON:
 1. LANGSUNG FOKUS: Jawab pertanyaan user secara langsung, lugas, dan profesional. DILARANG memperkenalkan diri, menyebut nama developer, atau membawa nama lokasi secara spontan jika tidak ditanya.
-2. PENGATURAN BAHASA: Gunakan Bahasa Indonesia yang jelas dan alami (atau Bahasa Inggris jika user bertanya dalam bahasa Inggris). DILARANG KERAS mengeluarkan karakter/aksara Cina (Hanzi) atau bahasa asing lain yang tidak relevan.
+2. PENGATURAN BAHASA: Gunakan Bahasa Indonesia yang jelas dan alami (atau Bahasa Inggris jika user bertanya dalam bahasa Inggris). DILARANG KERAS mengeluarkan karakter/aksara Cina (Hanzi) atau bahasa asing lain.
 3. IDENTITAS (Hanya Jika Ditanya): JIKA DAN HANYA JIKA user bertanya tentang identitas, asal-usul, pembuat, atau lokasi pengembanganmu, jawablah bahwa kamu adalah ${targetModelAlias} yang dikembangkan oleh Axynera dari Indonesia. Dilarang menyebut vendor lain (seperti OpenAI, Anthropic, Google, DeepSeek, Ciora, MiniMax).
 4. KODE WEB & THINKING: Jika membahas perbaikan atau pembuatan kode web (HTML/CSS/JS/PHP/React), fokuskan proses pemikiran (thinking) murni pada analisis bug, sintaks, dan optimasi kode secara teknis.`
     };
@@ -56,7 +57,7 @@ ATURAN RESPON:
 
     body.stream = true;
 
-    // 4. Request ke Upstream 9Router Gateway
+    // 5. Request ke Upstream 9Router Gateway
     const NINEROUTER_URL = process.env.NINEROUTER_URL || 'https://router.nextura.my.id/v1/chat/completions';
     const NINEROUTER_KEY = process.env.NINEROUTER_KEY || 'sk-ee154e57bedea543-a8o084-89b677ad';
 
@@ -73,17 +74,14 @@ ATURAN RESPON:
       return new Response(await upstreamResponse.text(), { status: upstreamResponse.status });
     }
 
-    // Potong Kuota User (-1 per request)
-    await kv.set(`key:${clientApiKey}`, { ...keyData, quota: keyData.quota - 1 });
-
-    // 5. TransformStream: Custom JSON SSE + Heartbeat Ping + Clean Chinese & Vendor Filter
+    // 6. TransformStream: Rebrand SSE + Clean Chinese & Vendor Filter + Heartbeat
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
     let heartbeatInterval;
 
     const stream = new TransformStream({
       start(controller) {
-        // Heartbeat Ping setiap 3 detik untuk mencegah Vercel Timeout
+        // Heartbeat Ping setiap 3 detik agar Vercel Edge tidak timeout
         heartbeatInterval = setInterval(() => {
           controller.enqueue(encoder.encode(': heartbeat ping\n\n'));
         }, 3000);
@@ -92,10 +90,10 @@ ATURAN RESPON:
       transform(chunk, controller) {
         let text = decoder.decode(chunk, { stream: true });
 
-        // Filter Karakter Cina (Hanzi)
+        // Filter Aksara Cina (Hanzi)
         text = text.replace(/[\u4e00-\u9fa5]+/g, '');
 
-        // Rebrand JSON SSE
+        // Rebrand Metadata JSON SSE
         const lines = text.split('\n');
         const processedLines = lines.map(line => {
           if (line.startsWith('data: ') && line !== 'data: [DONE]') {
@@ -103,7 +101,6 @@ ATURAN RESPON:
               const jsonStr = line.replace('data: ', '');
               const data = JSON.parse(jsonStr);
 
-              // Override Metadata JSON
               data.model = targetModelAlias;
               data.developer = "Axynera";
               data.origin = "Indonesia";
