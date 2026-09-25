@@ -6,13 +6,12 @@
     <title>Axynera Gateway | Enterprise API Status</title>
     <style>
         :root {
-            --bg-primary: #09090b;
-            --bg-card: #121215;
-            --bg-card-hover: #18181b;
-            --border: #27272a;
-            --border-hover: #3f3f46;
-            --text-main: #fafafa;
-            --text-muted: #a1a1aa;
+            --bg-primary: #e4e7ec;
+            --bg-card: #e4e7ec;
+            --shadow-light: #ffffff;
+            --shadow-dark: #c5c9d2;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
             --success: #10b981;
             --warning: #f59e0b;
             --error: #ef4444;
@@ -41,19 +40,19 @@
             max-width: 760px;
         }
 
-        /* Header Style */
+        /* Header Style (Neu Flat / Debossed) */
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 28px;
+            margin-bottom: 32px;
             padding-bottom: 20px;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid rgba(197, 201, 210, 0.6);
         }
 
         .brand h1 {
             font-size: 1.25rem;
-            font-weight: 600;
+            font-weight: 700;
             letter-spacing: -0.01em;
             color: var(--text-main);
         }
@@ -68,13 +67,13 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            background: rgba(16, 185, 129, 0.08);
+            background: #e4e7ec;
             color: var(--success);
-            padding: 6px 12px;
+            padding: 6px 14px;
             border-radius: 20px;
             font-size: 0.75rem;
-            font-weight: 500;
-            border: 1px solid rgba(16, 185, 129, 0.2);
+            font-weight: 600;
+            box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light);
         }
 
         .pulse-dot {
@@ -92,26 +91,21 @@
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
 
-        /* Model Card */
+        /* Model Card (Neumorphic Raised Container) */
         .card {
             background-color: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 20px 24px;
-            margin-bottom: 16px;
-            transition: border-color 0.2s ease, background-color 0.2s ease;
-        }
-
-        .card:hover {
-            background-color: var(--bg-card-hover);
-            border-color: var(--border-hover);
+            border-radius: 16px;
+            padding: 24px 28px;
+            margin-bottom: 22px;
+            box-shadow: 8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light);
+            transition: all 0.2s ease;
         }
 
         .card-top {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px;
+            margin-bottom: 20px;
         }
 
         .model-info {
@@ -121,24 +115,26 @@
         }
 
         .model-name {
-            font-size: 0.9375rem;
-            font-weight: 600;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #111827;
         }
 
         .model-sub {
             font-size: 0.75rem;
             color: var(--text-muted);
+            font-weight: 500;
         }
 
         .metrics-group {
             display: flex;
-            gap: 20px;
+            gap: 24px;
             text-align: right;
         }
 
         .metric-val {
             font-size: 0.9375rem;
-            font-weight: 600;
+            font-weight: 700;
             font-variant-numeric: tabular-nums;
         }
 
@@ -147,12 +143,19 @@
             color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            font-weight: 600;
         }
 
-        /* Canvas Arena */
+        /* Canvas Arena (Inset/Pressed Neumorphic Box untuk Batang Sinyal) */
         .canvas-box {
             width: 100%;
-            height: 32px;
+            height: 52px;
+            background: #e4e7ec;
+            border-radius: 10px;
+            padding: 4px 8px;
+            box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
+            display: flex;
+            align-items: center;
         }
 
         canvas {
@@ -161,37 +164,36 @@
             height: 100%;
         }
 
-        /* Footer Simulation Controller */
+        /* Realtime Live Counter Footer */
         .footer-tools {
-            margin-top: 24px;
+            margin-top: 28px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-size: 0.75rem;
             color: var(--text-muted);
-            border-top: 1px solid var(--border);
-            padding-top: 16px;
+            border-top: 1px solid rgba(197, 201, 210, 0.6);
+            padding-top: 18px;
+            font-weight: 500;
         }
 
-        .sim-btn-group {
+        .live-counter {
             display: flex;
+            align-items: center;
             gap: 8px;
-        }
-
-        button {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            color: var(--text-muted);
-            padding: 5px 10px;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        button:hover {
-            background: var(--border);
             color: var(--text-main);
+            font-weight: 600;
+        }
+
+        .counter-badge {
+            background: #e4e7ec;
+            color: #0284c7;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.8125rem;
+            box-shadow: inset 2px 2px 4px var(--shadow-dark), inset -2px -2px 4px var(--shadow-light);
+            border: none;
         }
     </style>
 </head>
@@ -255,19 +257,20 @@
             </div>
         </div>
 
+        <!-- Footer dengan Live Request Counter -->
         <div class="footer-tools">
-            <span>Auto-refresh every 1s</span>
-            <div class="sim-btn-group">
-                <button onclick="injectAnomaly('m1')">Simulate Spike/Error (M1)</button>
-                <button onclick="injectAnomaly('xcode')">Simulate Spike/Error (Xcode)</button>
+            <span>Auto-refresh signal stream</span>
+            <div class="live-counter">
+                <span>Total Live Requests:</span>
+                <span class="counter-badge" id="req-counter">1,482</span>
             </div>
         </div>
     </div>
 
     <script>
         const BLOCKS = 15;
+        let totalRequests = 1482;
         
-        // Status code: 2 = Normal (Hijau), 1 = Warning/High Ping (Kuning), 0 = Error/Down (Merah)
         const modelsData = {
             m1: { statusArr: Array(BLOCKS).fill(2), latencyArr: Array(BLOCKS).fill(45) },
             xcode: { statusArr: Array(BLOCKS).fill(2), latencyArr: Array(BLOCKS).fill(60) }
@@ -290,7 +293,7 @@
             const { ctx, width, height } = target;
             ctx.clearRect(0, 0, width, height);
 
-            const gap = 5;
+            const gap = 6;
             const totalGaps = gap * (BLOCKS - 1);
             const blockW = (width - totalGaps) / BLOCKS;
             const blockH = height;
@@ -299,16 +302,16 @@
                 const x = i * (blockW + gap);
 
                 if (val === 2) {
-                    ctx.fillStyle = '#10b981'; // Hijau Normal
+                    ctx.fillStyle = '#10b981'; // Hijau
                 } else if (val === 1) {
-                    ctx.fillStyle = '#f59e0b'; // Kuning (Ping Tinggi)
+                    ctx.fillStyle = '#f59e0b'; // Kuning
                 } else {
-                    ctx.fillStyle = '#ef4444'; // Merah (Error)
+                    ctx.fillStyle = '#ef4444'; // Merah
                 }
 
                 ctx.beginPath();
                 if (ctx.roundRect) {
-                    ctx.roundRect(x, 0, blockW, blockH, 3);
+                    ctx.roundRect(x, 0, blockW, blockH, 5);
                 } else {
                     ctx.rect(x, 0, blockW, blockH);
                 }
@@ -324,7 +327,6 @@
             const pingEl = document.getElementById(`${key}-ping`);
             const uptimeEl = document.getElementById(`${key}-uptime`);
 
-            // Hitung Uptime persentase (status 2 & 1 dihitung aktif, 0 error)
             const healthyCount = data.statusArr.filter(s => s > 0).length;
             const uptime = Math.round((healthyCount / BLOCKS) * 100);
             uptimeEl.innerText = `${uptime}%`;
@@ -338,25 +340,23 @@
                 pingEl.style.color = 'var(--warning)';
             } else {
                 pingEl.innerText = `${currentPing}ms`;
-                pingEl.style.color = 'var(--text-main)';
+                pingEl.style.color = '#1f2937';
             }
         }
 
-        // Live Tick Loop
         setInterval(() => {
             ['m1', 'xcode'].forEach(key => {
                 const data = modelsData[key];
                 
-                // Simulasi probabilitas: 92% normal (2), 6% ping tinggi (1), 2% error (0)
                 const rand = Math.random();
                 let newStatus = 2;
-                let newPing = Math.floor(30 + Math.random() * 50);
+                let newPing = Math.floor(25 + Math.random() * 45);
 
-                if (rand > 0.92 && rand <= 0.98) {
-                    newStatus = 1; // Kuning (Ping 300ms+)
-                    newPing = Math.floor(320 + Math.random() * 180);
-                } else if (rand > 0.98) {
-                    newStatus = 0; // Merah (Error)
+                if (rand > 0.94 && rand <= 0.99) {
+                    newStatus = 1;
+                    newPing = Math.floor(300 + Math.random() * 150);
+                } else if (rand > 0.99) {
+                    newStatus = 0;
                     newPing = 0;
                 }
 
@@ -370,23 +370,15 @@
 
                 refreshMetrics(key);
             });
+
+            totalRequests += Math.floor(1 + Math.random() * 4);
+            document.getElementById('req-counter').innerText = totalRequests.toLocaleString('id-ID');
         }, 1000);
 
-        // Render awal
         renderBlocks(cM1, modelsData.m1.statusArr);
         renderBlocks(cXcode, modelsData.xcode.statusArr);
         refreshMetrics('m1');
         refreshMetrics('xcode');
-
-        // Tombol Simulasi Anomali Manual
-        function injectAnomaly(key) {
-            modelsData[key].statusArr[BLOCKS - 1] = 0; // Paksa merah
-            modelsData[key].latencyArr[BLOCKS - 1] = 0;
-            
-            if (key === 'm1') renderBlocks(cM1, modelsData.m1.statusArr);
-            if (key === 'xcode') renderBlocks(cXcode, modelsData.xcode.statusArr);
-            refreshMetrics(key);
-        }
     </script>
 </body>
 </html>
