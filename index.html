@@ -40,7 +40,6 @@
             max-width: 760px;
         }
 
-        /* Header Style (Neu Flat / Debossed) */
         .header {
             display: flex;
             justify-content: space-between;
@@ -91,7 +90,6 @@
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
 
-        /* Model Card (Neumorphic Raised Container) */
         .card {
             background-color: var(--bg-card);
             border-radius: 16px;
@@ -146,7 +144,6 @@
             font-weight: 600;
         }
 
-        /* Canvas Arena (Inset/Pressed Neumorphic Box untuk Batang Sinyal) */
         .canvas-box {
             width: 100%;
             height: 52px;
@@ -164,7 +161,6 @@
             height: 100%;
         }
 
-        /* Realtime Live Counter Footer */
         .footer-tools {
             margin-top: 28px;
             display: flex;
@@ -211,7 +207,6 @@
             </div>
         </div>
 
-        <!-- Model M1 -->
         <div class="card">
             <div class="card-top">
                 <div class="model-info">
@@ -234,7 +229,6 @@
             </div>
         </div>
 
-        <!-- Model Xcode -->
         <div class="card">
             <div class="card-top">
                 <div class="model-info">
@@ -257,23 +251,23 @@
             </div>
         </div>
 
-        <!-- Footer dengan Live Request Counter -->
         <div class="footer-tools">
             <span>Auto-refresh signal stream</span>
             <div class="live-counter">
                 <span>Total Live Requests:</span>
-                <span class="counter-badge" id="req-counter">1,482</span>
+                <span class="counter-badge" id="req-counter">1,543</span>
             </div>
         </div>
     </div>
 
     <script>
         const BLOCKS = 15;
-        let totalRequests = 1482;
+        let totalRequests = 1543;
         
+        // Default semua hijau (2 = Hijau, 1 = Kuning, 0 = Merah)
         const modelsData = {
-            m1: { statusArr: Array(BLOCKS).fill(2), latencyArr: Array(BLOCKS).fill(45) },
-            xcode: { statusArr: Array(BLOCKS).fill(2), latencyArr: Array(BLOCKS).fill(60) }
+            m1: { statusArr: Array(BLOCKS).fill(2), latencyArr: Array(BLOCKS).fill(40) },
+            xcode: { statusArr: Array(BLOCKS).fill(2), latencyArr: Array(BLOCKS).fill(48) }
         };
 
         function initCanvas(id) {
@@ -349,17 +343,32 @@
                 const data = modelsData[key];
                 
                 const rand = Math.random();
-                let newStatus = 2;
-                let newPing = Math.floor(25 + Math.random() * 45);
+                let newStatus = 2; // Normal hijau
+                let newPing = Math.floor(30 + Math.random() * 25);
 
-                if (rand > 0.94 && rand <= 0.99) {
-                    newStatus = 1;
-                    newPing = Math.floor(300 + Math.random() * 150);
-                } else if (rand > 0.99) {
-                    newStatus = 0;
-                    newPing = 0;
+                // Peluang kecil terjadi anomali/error di ujung kanan
+                if (rand > 0.92 && rand <= 0.97) {
+                    newStatus = 1; // Kuning (Ping tinggi)
+                    newPing = Math.floor(320 + Math.random() * 100);
+                } else if (rand > 0.97) {
+                    // ERROR: Nambah 2 bar merah sekaligus di ujung kanan
+                    data.statusArr.shift();
+                    data.statusArr.push(0);
+                    data.latencyArr.shift();
+                    data.latencyArr.push(0);
+
+                    data.statusArr.shift();
+                    data.statusArr.push(0);
+                    data.latencyArr.shift();
+                    data.latencyArr.push(0);
+
+                    if (key === 'm1') renderBlocks(cM1, data.statusArr);
+                    if (key === 'xcode') renderBlocks(cXcode, data.statusArr);
+                    refreshMetrics(key);
+                    return;
                 }
 
+                // Pergerakan normal (Geser 1 bar ke kanan)
                 data.statusArr.shift();
                 data.statusArr.push(newStatus);
                 data.latencyArr.shift();
