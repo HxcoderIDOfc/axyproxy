@@ -17,22 +17,33 @@ export default async function handler(req) {
   const clientApiKey = authHeader.replace('Bearer ', '').trim();
 
   try {
+    // 1. Cek API Key di Vercel Global Config
     const keyData = await get(clientApiKey);
-    if (!keyData || keyData.active === false) {
+
+    // Validasi fleksibel: Jika key tidak ada atau bernilai false
+    if (keyData === undefined || keyData === null || keyData === false) {
       return new Response(JSON.stringify({ error: 'API Key tidak valid atau dinonaktifkan.' }), { status: 401 });
     }
 
-    if (typeof keyData.quota === 'number' && keyData.quota <= 0) {
-      return new Response(JSON.stringify({ error: 'Kuota API Key telah habis.' }), { status: 402 });
+    // Jika simpan data berbentuk objek { active: true, quota: 100 }
+    if (typeof keyData === 'object' && keyData !== null) {
+      if (keyData.active === false) {
+        return new Response(JSON.stringify({ error: 'API Key dinonaktifkan.' }), { status: 401 });
+      }
+      if (typeof keyData.quota === 'number' && keyData.quota <= 0) {
+        return new Response(JSON.stringify({ error: 'Kuota API Key telah habis.' }), { status: 402 });
+      }
     }
 
     const body = await req.json();
 
+    // Mapping Alias Model
     let targetModelAlias = "Axynity-Xcode";
     if (body.model === "Axynity-M1" || body.model === "axynity-m1" || body.model === "Axynity flash") {
       targetModelAlias = "Axynity-M1";
     }
 
+    // 2. Inject System Prompt
     const customSystemPrompt = {
       role: "system",
       content: `Kamu adalah ${targetModelAlias}, model AI canggih yang dikembangkan oleh Axynera dari Indonesia.
@@ -52,6 +63,7 @@ ATURAN RESPON:
 
     body.stream = true;
 
+    // 3. Request ke Upstream 9Router
     const NINEROUTER_URL = process.env.NINEROUTER_URL || 'https://router.nextura.my.id/v1/chat/completions';
     const NINEROUTER_KEY = process.env.NINEROUTER_KEY || 'sk-ee154e57bedea543-a8o084-89b677ad';
 
@@ -68,6 +80,7 @@ ATURAN RESPON:
       return new Response(await upstreamResponse.text(), { status: upstreamResponse.status });
     }
 
+    // 4. TransformStream & Heartbeat Ping
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
     let heartbeatInterval;
@@ -82,6 +95,7 @@ ATURAN RESPON:
       transform(chunk, controller) {
         let text = decoder.decode(chunk, { stream: true });
 
+        // Filter Karakter Cina (Hanzi)
         text = text.replace(/[\u4e00-\u9fa5]+/g, '');
 
         const lines = text.split('\n');
