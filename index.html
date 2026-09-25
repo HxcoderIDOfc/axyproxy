@@ -3,17 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Axynera Gateway | System Status</title>
+    <title>Axynera Gateway | Enterprise API Status</title>
     <style>
         :root {
-            --bg-base: #09090b;
-            --bg-card: #18181b;
+            --bg-primary: #09090b;
+            --bg-card: #121215;
+            --bg-card-hover: #18181b;
             --border: #27272a;
-            --text-main: #f4f4f5;
+            --border-hover: #3f3f46;
+            --text-main: #fafafa;
             --text-muted: #a1a1aa;
             --success: #10b981;
+            --warning: #f59e0b;
             --error: #ef4444;
-            --font-main: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
         * {
@@ -23,117 +26,133 @@
         }
 
         body {
-            background-color: var(--bg-base);
+            background-color: var(--bg-primary);
             color: var(--text-main);
             font-family: var(--font-main);
             display: flex;
             justify-content: center;
-            align-items: flex-start;
+            align-items: center;
             min-height: 100vh;
-            padding: 40px 20px;
+            padding: 24px;
         }
 
-        .dashboard {
+        .container {
             width: 100%;
-            max-width: 800px;
+            max-width: 760px;
         }
 
+        /* Header Style */
         .header {
-            margin-bottom: 32px;
             display: flex;
             justify-content: space-between;
-            align-items: flex-end;
+            align-items: center;
+            margin-bottom: 28px;
             padding-bottom: 20px;
             border-bottom: 1px solid var(--border);
         }
 
-        .header h1 {
-            font-size: 1.5rem;
+        .brand h1 {
+            font-size: 1.25rem;
             font-weight: 600;
-            letter-spacing: -0.025em;
+            letter-spacing: -0.01em;
+            color: var(--text-main);
         }
 
-        .header p {
+        .brand p {
+            font-size: 0.8125rem;
             color: var(--text-muted);
-            font-size: 0.875rem;
-            margin-top: 4px;
+            margin-top: 2px;
         }
 
         .status-badge {
             display: flex;
             align-items: center;
             gap: 8px;
-            background: rgba(16, 185, 129, 0.1);
+            background: rgba(16, 185, 129, 0.08);
             color: var(--success);
             padding: 6px 12px;
-            border-radius: 9999px;
+            border-radius: 20px;
             font-size: 0.75rem;
-            font-weight: 600;
+            font-weight: 500;
             border: 1px solid rgba(16, 185, 129, 0.2);
         }
 
-        .pulse {
-            width: 8px;
-            height: 8px;
+        .pulse-dot {
+            width: 6px;
+            height: 6px;
             background-color: var(--success);
             border-radius: 50%;
-            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-            animation: pulse-ring 2s infinite;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+            animation: pulse 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
         }
 
-        @keyframes pulse-ring {
-            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-            70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
 
-        .model-card {
+        /* Model Card */
+        .card {
             background-color: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border-radius: 10px;
+            padding: 20px 24px;
+            margin-bottom: 16px;
+            transition: border-color 0.2s ease, background-color 0.2s ease;
         }
 
-        .card-header {
+        .card:hover {
+            background-color: var(--bg-card-hover);
+            border-color: var(--border-hover);
+        }
+
+        .card-top {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
 
-        .card-title {
-            font-size: 1.125rem;
+        .model-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .model-name {
+            font-size: 0.9375rem;
             font-weight: 600;
         }
 
-        .metrics {
-            display: flex;
-            gap: 24px;
+        .model-sub {
+            font-size: 0.75rem;
+            color: var(--text-muted);
         }
 
-        .metric-item {
+        .metrics-group {
+            display: flex;
+            gap: 20px;
             text-align: right;
         }
 
-        .metric-value {
-            font-size: 1.125rem;
+        .metric-val {
+            font-size: 0.9375rem;
             font-weight: 600;
             font-variant-numeric: tabular-nums;
         }
 
-        .metric-label {
-            font-size: 0.75rem;
+        .metric-lbl {
+            font-size: 0.6875rem;
             color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
 
-        .canvas-wrapper {
+        /* Canvas Arena */
+        .canvas-box {
             width: 100%;
-            height: 40px;
-            position: relative;
+            height: 32px;
         }
 
         canvas {
@@ -142,204 +161,231 @@
             height: 100%;
         }
 
-        /* Tombol test hanya untuk preview lokal, bisa dihapus nanti */
-        .dev-tools {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px dashed var(--border);
+        /* Footer Simulation Controller */
+        .footer-tools {
+            margin-top: 24px;
             display: flex;
-            gap: 12px;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border);
+            padding-top: 16px;
         }
 
-        .dev-tools button {
+        .sim-btn-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        button {
             background: var(--bg-card);
             border: 1px solid var(--border);
             color: var(--text-muted);
-            padding: 6px 12px;
+            padding: 5px 10px;
             border-radius: 6px;
             font-size: 0.75rem;
             cursor: pointer;
             transition: all 0.2s;
         }
 
-        .dev-tools button:hover {
-            border-color: var(--error);
-            color: var(--error);
+        button:hover {
+            background: var(--border);
+            color: var(--text-main);
         }
     </style>
 </head>
 <body>
 
-    <div class="dashboard">
+    <div class="container">
         <div class="header">
-            <div>
-                <h1>Axynera Gateway</h1>
-                <p>9Router API System Status</p>
+            <div class="brand">
+                <h1>Axynera Proxy</h1>
+                <p>System Live Latency & Availability Monitor</p>
             </div>
-            <div class="status-badge" id="global-status">
-                <div class="pulse"></div>
-                All Systems Operational
+            <div class="status-badge">
+                <div class="pulse-dot"></div>
+                Operational
             </div>
         </div>
 
-        <!-- Card Axynity-M1 -->
-        <div class="model-card">
-            <div class="card-header">
-                <div class="card-title">Axynity-M1</div>
-                <div class="metrics">
-                    <div class="metric-item">
-                        <div class="metric-value" id="m1-ping">32ms</div>
-                        <div class="metric-label">Latency</div>
+        <!-- Model M1 -->
+        <div class="card">
+            <div class="card-top">
+                <div class="model-info">
+                    <span class="model-name">Axynity-M1</span>
+                    <span class="model-sub">Primary LLM Engine</span>
+                </div>
+                <div class="metrics-group">
+                    <div>
+                        <div class="metric-val" id="m1-ping">--</div>
+                        <div class="metric-lbl">Latency</div>
                     </div>
-                    <div class="metric-item">
-                        <div class="metric-value" style="color: var(--success);" id="m1-health">100%</div>
-                        <div class="metric-label">Uptime</div>
+                    <div>
+                        <div class="metric-val" style="color: var(--success);" id="m1-uptime">100%</div>
+                        <div class="metric-lbl">Uptime</div>
                     </div>
                 </div>
             </div>
-            <div class="canvas-wrapper">
-                <canvas id="canvas-m1"></canvas>
+            <div class="canvas-box">
+                <canvas id="c-m1"></canvas>
             </div>
         </div>
 
-        <!-- Card Axynity-Xcode -->
-        <div class="model-card">
-            <div class="card-header">
-                <div class="card-title">Axynity-Xcode</div>
-                <div class="metrics">
-                    <div class="metric-item">
-                        <div class="metric-value" id="xcode-ping">45ms</div>
-                        <div class="metric-label">Latency</div>
+        <!-- Model Xcode -->
+        <div class="card">
+            <div class="card-top">
+                <div class="model-info">
+                    <span class="model-name">Axynity-Xcode</span>
+                    <span class="model-sub">Coding Specialized Engine</span>
+                </div>
+                <div class="metrics-group">
+                    <div>
+                        <div class="metric-val" id="xcode-ping">--</div>
+                        <div class="metric-lbl">Latency</div>
                     </div>
-                    <div class="metric-item">
-                        <div class="metric-value" style="color: var(--success);" id="xcode-health">100%</div>
-                        <div class="metric-label">Uptime</div>
+                    <div>
+                        <div class="metric-val" style="color: var(--success);" id="xcode-uptime">100%</div>
+                        <div class="metric-lbl">Uptime</div>
                     </div>
                 </div>
             </div>
-            <div class="canvas-wrapper">
-                <canvas id="canvas-xcode"></canvas>
+            <div class="canvas-box">
+                <canvas id="c-xcode"></canvas>
             </div>
         </div>
 
-        <!-- Dev tools simulasi (Boleh dihapus jika sudah naik produksi) -->
-        <div class="dev-tools">
-            <button onclick="forceError('m1')">Inject Error (M1)</button>
-            <button onclick="forceError('xcode')">Inject Error (Xcode)</button>
+        <div class="footer-tools">
+            <span>Auto-refresh every 1s</span>
+            <div class="sim-btn-group">
+                <button onclick="injectAnomaly('m1')">Simulate Spike/Error (M1)</button>
+                <button onclick="injectAnomaly('xcode')">Simulate Spike/Error (Xcode)</button>
+            </div>
         </div>
     </div>
 
     <script>
-        const MAX_BLOCKS = 15;
+        const BLOCKS = 15;
         
-        // Data State untuk masing-masing model
-        const state = {
-            m1: {
-                pings: Array(MAX_BLOCKS).fill(1), // 1 = Sukses, 0 = Error
-                latencies: Array(MAX_BLOCKS).fill(30)
-            },
-            xcode: {
-                pings: Array(MAX_BLOCKS).fill(1),
-                latencies: Array(MAX_BLOCKS).fill(40)
-            }
+        // Status code: 2 = Normal (Hijau), 1 = Warning/High Ping (Kuning), 0 = Error/Down (Merah)
+        const modelsData = {
+            m1: { statusArr: Array(BLOCKS).fill(2), latencyArr: Array(BLOCKS).fill(45) },
+            xcode: { statusArr: Array(BLOCKS).fill(2), latencyArr: Array(BLOCKS).fill(60) }
         };
 
-        function setupCanvas(canvasId) {
-            const canvas = document.getElementById(canvasId);
-            // Menyesuaikan resolusi untuk layar retina/HD
-            const rect = canvas.parentElement.getBoundingClientRect();
+        function initCanvas(id) {
+            const canvas = document.getElementById(id);
+            const rect = canvas.getBoundingClientRect();
             canvas.width = rect.width * 2;
             canvas.height = rect.height * 2;
             const ctx = canvas.getContext('2d');
             ctx.scale(2, 2);
-            return { canvas, ctx, width: rect.width, height: rect.height };
+            return { ctx, width: rect.width, height: rect.height };
         }
 
-        const m1Canvas = setupCanvas('canvas-m1');
-        const xcodeCanvas = setupCanvas('canvas-xcode');
+        const cM1 = initCanvas('c-m1');
+        const cXcode = initCanvas('c-xcode');
 
-        function drawBlocks(ctx, width, height, pings) {
+        function renderBlocks(target, statusArr) {
+            const { ctx, width, height } = target;
             ctx.clearRect(0, 0, width, height);
-            
-            const gap = 6;
-            const totalGaps = gap * (MAX_BLOCKS - 1);
-            const blockWidth = (width - totalGaps) / MAX_BLOCKS;
-            const blockHeight = height;
 
-            pings.forEach((status, i) => {
-                const x = i * (blockWidth + gap);
-                
-                // Styling warna modern tanpa glow norak
-                if (status === 1) {
-                    ctx.fillStyle = "#10b981"; // Emerald
+            const gap = 5;
+            const totalGaps = gap * (BLOCKS - 1);
+            const blockW = (width - totalGaps) / BLOCKS;
+            const blockH = height;
+
+            statusArr.forEach((val, i) => {
+                const x = i * (blockW + gap);
+
+                if (val === 2) {
+                    ctx.fillStyle = '#10b981'; // Hijau Normal
+                } else if (val === 1) {
+                    ctx.fillStyle = '#f59e0b'; // Kuning (Ping Tinggi)
                 } else {
-                    ctx.fillStyle = "#ef4444"; // Rose/Red
+                    ctx.fillStyle = '#ef4444'; // Merah (Error)
                 }
 
-                // Kotak rounded (sisi tumpul)
                 ctx.beginPath();
                 if (ctx.roundRect) {
-                    ctx.roundRect(x, 0, blockWidth, blockHeight, 4);
+                    ctx.roundRect(x, 0, blockW, blockH, 3);
                 } else {
-                    ctx.rect(x, 0, blockWidth, blockHeight);
+                    ctx.rect(x, 0, blockW, blockH);
                 }
                 ctx.fill();
             });
         }
 
-        function updateUI(modelId) {
-            const data = state[modelId];
-            
-            // Hitung Uptime
-            const successCount = data.pings.filter(p => p === 1).length;
-            const uptime = Math.round((successCount / MAX_BLOCKS) * 100);
-            const healthEl = document.getElementById(`${modelId}-health`);
-            healthEl.innerText = `${uptime}%`;
-            healthEl.style.color = uptime >= 80 ? 'var(--success)' : 'var(--error)';
+        function refreshMetrics(key) {
+            const data = modelsData[key];
+            const currentStatus = data.statusArr[BLOCKS - 1];
+            const currentPing = data.latencyArr[BLOCKS - 1];
 
-            // Update Ping Terbaru (Angka acak natural)
-            const basePing = modelId === 'm1' ? 30 : 45;
-            const isError = data.pings[MAX_BLOCKS - 1] === 0;
-            const currentPing = isError ? 'ERR' : Math.floor(basePing + (Math.random() * 15)) + 'ms';
-            const pingEl = document.getElementById(`${modelId}-ping`);
-            pingEl.innerText = currentPing;
-            pingEl.style.color = isError ? 'var(--error)' : 'var(--text-main)';
+            const pingEl = document.getElementById(`${key}-ping`);
+            const uptimeEl = document.getElementById(`${key}-uptime`);
+
+            // Hitung Uptime persentase (status 2 & 1 dihitung aktif, 0 error)
+            const healthyCount = data.statusArr.filter(s => s > 0).length;
+            const uptime = Math.round((healthyCount / BLOCKS) * 100);
+            uptimeEl.innerText = `${uptime}%`;
+            uptimeEl.style.color = uptime >= 80 ? 'var(--success)' : 'var(--error)';
+
+            if (currentStatus === 0) {
+                pingEl.innerText = 'ERR';
+                pingEl.style.color = 'var(--error)';
+            } else if (currentStatus === 1) {
+                pingEl.innerText = `${currentPing}ms`;
+                pingEl.style.color = 'var(--warning)';
+            } else {
+                pingEl.innerText = `${currentPing}ms`;
+                pingEl.style.color = 'var(--text-main)';
+            }
         }
 
-        // Main Loop
+        // Live Tick Loop
         setInterval(() => {
-            ['m1', 'xcode'].forEach(id => {
-                const data = state[id];
+            ['m1', 'xcode'].forEach(key => {
+                const data = modelsData[key];
                 
-                // Normalnya 99% sukses
-                const isSuccess = Math.random() > 0.01 ? 1 : 0;
-                
-                data.pings.shift();
-                data.pings.push(isSuccess);
+                // Simulasi probabilitas: 92% normal (2), 6% ping tinggi (1), 2% error (0)
+                const rand = Math.random();
+                let newStatus = 2;
+                let newPing = Math.floor(30 + Math.random() * 50);
 
-                if (id === 'm1') drawBlocks(m1Canvas.ctx, m1Canvas.width, m1Canvas.height, data.pings);
-                if (id === 'xcode') drawBlocks(xcodeCanvas.ctx, xcodeCanvas.width, xcodeCanvas.height, data.pings);
-                
-                updateUI(id);
+                if (rand > 0.92 && rand <= 0.98) {
+                    newStatus = 1; // Kuning (Ping 300ms+)
+                    newPing = Math.floor(320 + Math.random() * 180);
+                } else if (rand > 0.98) {
+                    newStatus = 0; // Merah (Error)
+                    newPing = 0;
+                }
+
+                data.statusArr.shift();
+                data.statusArr.push(newStatus);
+                data.latencyArr.shift();
+                data.latencyArr.push(newPing);
+
+                if (key === 'm1') renderBlocks(cM1, data.statusArr);
+                if (key === 'xcode') renderBlocks(cXcode, data.statusArr);
+
+                refreshMetrics(key);
             });
-        }, 1000); // 1 detik per shift
+        }, 1000);
 
-        // Render perdana
-        drawBlocks(m1Canvas.ctx, m1Canvas.width, m1Canvas.height, state.m1.pings);
-        drawBlocks(xcodeCanvas.ctx, xcodeCanvas.width, xcodeCanvas.height, state.xcode.pings);
-        
-        // Handle Resize
-        window.addEventListener('resize', () => {
-            // Reload simple saat resize agar ukuran canvas presisi
-            location.reload(); 
-        });
+        // Render awal
+        renderBlocks(cM1, modelsData.m1.statusArr);
+        renderBlocks(cXcode, modelsData.xcode.statusArr);
+        refreshMetrics('m1');
+        refreshMetrics('xcode');
 
-        // Fungsi manual error untuk tombol dev-tools
-        function forceError(modelId) {
-            state[modelId].pings[MAX_BLOCKS - 1] = 0;
-            const canvasObj = modelId === 'm1' ? m1Canvas : xcodeCanvas;
-            drawBlocks(canvasObj.ctx, canvasObj.width, canvasObj.height, state[modelId].pings);
-            updateUI(modelId);
+        // Tombol Simulasi Anomali Manual
+        function injectAnomaly(key) {
+            modelsData[key].statusArr[BLOCKS - 1] = 0; // Paksa merah
+            modelsData[key].latencyArr[BLOCKS - 1] = 0;
+            
+            if (key === 'm1') renderBlocks(cM1, modelsData.m1.statusArr);
+            if (key === 'xcode') renderBlocks(cXcode, modelsData.xcode.statusArr);
+            refreshMetrics(key);
         }
     </script>
 </body>
