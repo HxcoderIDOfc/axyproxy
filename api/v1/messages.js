@@ -20,19 +20,31 @@ export default async function handler(req) {
   const clientApiKey = apiKeyHeader.trim();
 
   try {
+    // 1. Cek API Key di Vercel Global Config
     const keyData = await get(clientApiKey);
-    if (!keyData || keyData.active === false) {
+
+    // Validasi fleksibel: Jika key tidak ditemukan atau bernilai false
+    if (keyData === undefined || keyData === null || keyData === false) {
       return new Response(JSON.stringify({
         type: "error",
         error: { type: "authentication_error", message: "API Key tidak valid atau dinonaktifkan." }
       }), { status: 401 });
     }
 
-    if (typeof keyData.quota === 'number' && keyData.quota <= 0) {
-      return new Response(JSON.stringify({
-        type: "error",
-        error: { type: "rate_limit_error", message: "Kuota API Key telah habis." }
-      }), { status: 402 });
+    // Jika keyData berupa Objek JSON (opsional jika pakai kuota/active)
+    if (typeof keyData === 'object' && keyData !== null) {
+      if (keyData.active === false) {
+        return new Response(JSON.stringify({
+          type: "error",
+          error: { type: "authentication_error", message: "API Key telah dinonaktifkan." }
+        }), { status: 401 });
+      }
+      if (typeof keyData.quota === 'number' && keyData.quota <= 0) {
+        return new Response(JSON.stringify({
+          type: "error",
+          error: { type: "rate_limit_error", message: "Kuota API Key telah habis." }
+        }), { status: 402 });
+      }
     }
 
     const body = await req.json();
@@ -42,6 +54,7 @@ export default async function handler(req) {
       targetModelAlias = "Axynity-M1";
     }
 
+    // 2. Inject System Instruction
     const customSystemInstruction = `Kamu adalah ${targetModelAlias}, model AI canggih yang dikembangkan oleh Axynera dari Indonesia.
 
 ATURAN RESPON:
@@ -62,6 +75,7 @@ ATURAN RESPON:
 
     body.stream = true;
 
+    // 3. Request ke Upstream 9Router
     const NINEROUTER_URL = process.env.NINEROUTER_URL_ANTHROPIC || 'https://router.nextura.my.id/v1/messages';
     const NINEROUTER_KEY = process.env.NINEROUTER_KEY || 'sk-ee154e57bedea543-a8o084-89b677ad';
 
@@ -79,6 +93,7 @@ ATURAN RESPON:
       return new Response(await upstreamResponse.text(), { status: upstreamResponse.status });
     }
 
+    // 4. TransformStream & Heartbeat Ping
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
     let heartbeatInterval;
@@ -93,6 +108,7 @@ ATURAN RESPON:
       transform(chunk, controller) {
         let text = decoder.decode(chunk, { stream: true });
 
+        // Filter Karakter Cina (Hanzi)
         text = text.replace(/[\u4e00-\u9fa5]+/g, '');
 
         text = text.replace(/"model":\s*"[^"]+"/g, `"model":"${targetModelAlias}"`);
