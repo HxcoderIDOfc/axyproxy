@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "api/v1/chat/completions.js": {
+      "maxDuration": 30,
+      "memory": 1024
+    }
+  },
+  "routes": [
+    { "src": "/v1/chat/completions", "dest": "/api/v1/chat/completions.js" },
+    { "src": "/v1/models", "dest": "/api/v1/models.js" },
+    { "src": "/api/keys", "dest": "/api/v1/keys.js" }
+  ]
+}
