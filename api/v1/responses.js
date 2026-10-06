@@ -17,7 +17,7 @@ export default async function handler(req) {
   const clientApiKey = authHeader.replace('Bearer ', '').trim();
 
   try {
-    // 1. Cek API Key di Vercel Global Config
+    // 1. Verifikasi API Key via Vercel Global Config
     const keyData = await get(clientApiKey);
 
     if (keyData === undefined || keyData === null || keyData === false) {
@@ -35,15 +35,14 @@ export default async function handler(req) {
 
     const body = await req.json();
 
-    // 2. Normalisasi Model & Format Payload dari /v1/responses ke /v1/chat/completions
+    // 2. Normalisasi Model & Ekstraksi Messages dari Payload Codex CLI /v1/responses
     const rawModel = (body.model || '').toLowerCase();
-    let targetModelAlias = "Axynity-Xcode";
+    let targetModelAlias = "Axynity-M1";
 
-    if (rawModel.includes("m1") || rawModel.includes("flash")) {
-      targetModelAlias = "Axynity-M1";
+    if (rawModel.includes("xcode") || rawModel.includes("coder")) {
+      targetModelAlias = "Axynity-Xcode";
     }
 
-    // Jika dipanggil dari Codex /v1/responses, input pesan bisa dalam format body.input atau body.messages
     let messages = body.messages || [];
     if (!messages.length && body.input) {
       if (typeof body.input === 'string') {
@@ -53,9 +52,6 @@ export default async function handler(req) {
       }
     }
 
-    const isStream = body.stream !== undefined ? Boolean(body.stream) : true;
-
-    // 3. System Prompt khusus Axynera
     const customSystemPrompt = {
       role: "system",
       content: `Kamu adalah ${targetModelAlias}, asisten AI cerdas dan serbaguna yang dikembangkan oleh Axynera.
@@ -70,16 +66,15 @@ PANDUAN BERKOMUNIKASI:
 
     messages.unshift(customSystemPrompt);
 
-    // Payload yang diteruskan ke Upstream 9Router (Format Chat Completions)
+    // 3. Construct Payload untuk Upstream Chat Completions
     const upstreamBody = {
       model: targetModelAlias,
       messages: messages,
-      stream: isStream,
+      stream: true,
       temperature: body.temperature ?? 0.7,
       max_tokens: body.max_tokens ?? 4096
     };
 
-    // 4. Send ke Upstream 9Router
     const NINEROUTER_URL = process.env.NINEROUTER_URL || 'https://router.nextura.my.id/v1/chat/completions';
     const NINEROUTER_KEY = process.env.NINEROUTER_KEY || 'sk-ee154e57bedea543-a8o084-89b677ad';
 
@@ -96,35 +91,7 @@ PANDUAN BERKOMUNIKASI:
       return new Response(await upstreamResponse.text(), { status: upstreamResponse.status });
     }
 
-    // -------------------------------------------------------------
-    // PENANGANAN 1: NON-STREAMING
-    // -------------------------------------------------------------
-    if (!isStream) {
-      const data = await upstreamResponse.json();
-
-      data.model = targetModelAlias;
-      data.developer = "Axynera";
-      data.origin = "Indonesia";
-
-      if (data.choices && Array.isArray(data.choices)) {
-        data.choices.forEach(choice => {
-          if (choice.message && choice.message.content) {
-            choice.message.content = choice.message.content
-              .replace(/[\u4e00-\u9fa5]+/g, '')
-              .replace(/(OpenAI|Anthropic|Google|DeepSeek|ChatGPT|Claude)/gi, "Axynera");
-          }
-        });
-      }
-
-      return new Response(JSON.stringify(data), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    // -------------------------------------------------------------
-    // PENANGANAN 2: STREAMING RESPONSE (Untuk Codex /v1/responses)
-    // -------------------------------------------------------------
+    // 4. Stream Transformer agar Kompatibel dengan Format Stream Responses Codex
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
     let heartbeatInterval;
