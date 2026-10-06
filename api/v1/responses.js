@@ -33,6 +33,7 @@ export default async function handler(req) {
   const clientApiKey = authHeader.replace('Bearer ', '').trim();
 
   try {
+    // 1. Validasi API Key
     const keyData = await get(clientApiKey);
 
     if (keyData === undefined || keyData === null || keyData === false) {
@@ -59,9 +60,17 @@ export default async function handler(req) {
 
     const body = await req.json();
 
-    const clientModel = body.model || "axynity-Xcode";
+    // 2. Setup nama model (huruf 'a' kecil sesuai permintaan)
+    let clientModel = body.model || "axynity-Xcode";
+    if (clientModel.toLowerCase() === "axynity-m1") {
+      clientModel = "axynity-M1";
+    } else if (clientModel.toLowerCase() === "axynity-xcode") {
+      clientModel = "axynity-Xcode";
+    }
+
     const isStream = Boolean(body.stream);
 
+    // 3. System Prompt & Normalisasi Pesan
     const customSystemPrompt = {
       role: "system",
       content: `Kamu adalah ${clientModel}, asisten AI cerdas dan serbaguna yang dikembangkan oleh Axynera.
@@ -92,6 +101,7 @@ PANDUAN BERKOMUNIKASI:
       stream: isStream
     };
 
+    // 4. Request ke Upstream
     const NINEROUTER_URL = process.env.NINEROUTER_URL || 'https://router.nextura.my.id/v1/chat/completions';
     const NINEROUTER_KEY = process.env.NINEROUTER_KEY || 'sk-ee154e57bedea543-a8o084-89b677ad';
 
@@ -111,7 +121,9 @@ PANDUAN BERKOMUNIKASI:
       });
     }
 
-    // NON-STREAMING RESPONSE
+    // -------------------------------------------------------------
+    // PENANGANAN 1: NON-STREAMING RESPONSE
+    // -------------------------------------------------------------
     if (!isStream) {
       const data = await upstreamResponse.json();
 
@@ -135,78 +147,36 @@ PANDUAN BERKOMUNIKASI:
       });
     }
 
-    // STREAMING RESPONSE WITH LINE BUFFERING
+    // -------------------------------------------------------------
+    // PENANGANAN 2: STREAMING RESPONSE (ANTI PUTUS)
+    // -------------------------------------------------------------
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
-    let lineBuffer = '';
 
     const stream = new TransformStream({
       transform(chunk, controller) {
-        lineBuffer += decoder.decode(chunk, { stream: true });
-        const lines = lineBuffer.split('\n');
-        lineBuffer = lines.pop() || '';
+        // Dekode chunk secara langsung
+        let text = decoder.decode(chunk, { stream: true });
 
-        for (const line of lines) {
-          const trimmedLine = line.trim();
-          if (!trimmedLine) continue;
+        // Filter Hanzi dan ganti identitas (Manipulasi string langsung, BUKAN JSON.parse)
+        text = text.replace(/[\u4e00-\u9fa5]+/g, '');
+        text = text.replace(/(OpenAI|Anthropic|Google|DeepSeek|ChatGPT|Claude)/gi, "Axynera");
+        
+        // Timpa nama model di dalam string JSON yang sedang lewat
+        text = text.replace(/"model":\s*"[^"]+"/g, `"model":"${clientModel}"`);
 
-          if (trimmedLine.startsWith('data: ')) {
-            if (trimmedLine === 'data: [DONE]') {
-              controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-              continue;
-            }
-
-            try {
-              const jsonStr = trimmedLine.replace('data: ', '');
-              const data = JSON.parse(jsonStr);
-
-              data.model = clientModel;
-              data.developer = "Axynera";
-              data.origin = "Indonesia";
-
-              if (data.choices && data.choices[0]?.delta?.reasoning_content) {
-                data.choices[0].delta.reasoning_content = data.choices[0].delta.reasoning_content
-                  .replace(/[\u4e00-\u9fa5]+/g, '')
-                  .replace(/(OpenAI|Anthropic|Google|DeepSeek|ChatGPT|Claude)/gi, "Axynera Engine");
-              }
-
-              if (data.choices && data.choices[0]?.delta?.content) {
-                data.choices[0].delta.content = data.choices[0].delta.content
-                  .replace(/[\u4e00-\u9fa5]+/g, '')
-                  .replace(/(OpenAI|Anthropic|Google|DeepSeek|ChatGPT|Claude)/gi, "Axynera");
-              }
-
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
-            } catch (e) {
-              const cleaned = line
-                .replace(/[\u4e00-\u9fa5]+/g, '')
-                .replace(/(OpenAI|Anthropic|Google|DeepSeek|ChatGPT|Claude)/gi, "Axynera");
-              controller.enqueue(encoder.encode(`${cleaned}\n\n`));
-            }
-          } else {
-            const cleaned = line
-              .replace(/[\u4e00-\u9fa5]+/g, '')
-              .replace(/(OpenAI|Anthropic|Google|DeepSeek|ChatGPT|Claude)/gi, "Axynera");
-            controller.enqueue(encoder.encode(`${cleaned}\n`));
-          }
-        }
-      },
-
-      flush(controller) {
-        if (lineBuffer.trim()) {
-          controller.enqueue(encoder.encode(`${lineBuffer}\n\n`));
-        }
+        // Langsung teruskan ke client
+        controller.enqueue(encoder.encode(text));
       }
     });
 
-    const transformedStream = upstreamResponse.body.pipeThrough(stream);
-
-    return new Response(transformedStream, {
+    return new Response(upstreamResponse.body.pipeThrough(stream), {
       headers: {
         ...corsHeaders,
-        'Content-Type': 'text/event-stream',
+        'Content-Type': 'text/event-stream; charset=utf-8',
         'Cache-Control': 'no-cache, no-transform',
         'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no',
       },
     });
 
