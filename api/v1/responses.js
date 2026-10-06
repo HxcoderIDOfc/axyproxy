@@ -44,19 +44,17 @@ export default async function handler(req) {
 
     const body = await req.json();
 
-    // 1. Pemetaan Model (Sesuai Permintaan: a kecil, M/X besar)
-    const rawModel = (body.model || "axynity-Xcode").toLowerCase();
-    let clientModel = "axynity-Xcode";
-    let upstreamModel = "gpt-4o-mini"; // Model valid di router
-
-    if (rawModel.includes("m1") || rawModel.includes("flash")) {
+    // Gunakan nama model asli dari client (axynity-M1 atau axynity-Xcode)
+    let clientModel = body.model || "axynity-Xcode";
+    if (clientModel.toLowerCase() === "axynity-m1") {
       clientModel = "axynity-M1";
-      upstreamModel = "gemini-1.5-flash"; // Model valid di router
+    } else if (clientModel.toLowerCase() === "axynity-xcode") {
+      clientModel = "axynity-Xcode";
     }
 
     const isStream = Boolean(body.stream);
 
-    // 2. Format Pesan dan System Prompt
+    // System Prompt
     const customSystemPrompt = {
       role: "system",
       content: `Kamu adalah ${clientModel}, asisten AI cerdas ciptaan Axynera dari Indonesia. DILARANG KERAS menyebutkan vendor lain. HANYA gunakan karakter latin/alfabet biasa (DILARANG Hanzi).`
@@ -73,7 +71,7 @@ export default async function handler(req) {
       rawMessages = [{ role: "user", content: "hallo" }];
     }
 
-    // SANITASI PESAN CODEX CLI: (Memastikan content selalu string, mencegah error jika Codex kirim object/array image-vision)
+    // Sanitasi format pesan agar aman dikirim ke upstream
     let safeMessages = rawMessages.map(msg => {
       let textContent = msg.content;
       if (Array.isArray(textContent)) {
@@ -86,15 +84,13 @@ export default async function handler(req) {
 
     safeMessages.unshift(customSystemPrompt);
 
-    // 3. SANITASI PAYLOAD (Super Ketat)
-    // Codex mengirim parameter "tools" yang ditolak router, jadi JANGAN gunakan "...body"
+    // KIRIM MODEL LANGSUNG KE UPSTREAM (Tanpa diubah ke model lain)
     const upstreamPayload = {
-      model: upstreamModel,
+      model: clientModel,
       messages: safeMessages,
       stream: isStream
     };
 
-    // 4. Request ke Upstream (Router Nextura)
     const NINEROUTER_URL = process.env.NINEROUTER_URL || 'https://router.nextura.my.id/v1/chat/completions';
     const NINEROUTER_KEY = process.env.NINEROUTER_KEY || 'sk-ee154e57bedea543-a8o084-89b677ad';
 
@@ -114,7 +110,7 @@ export default async function handler(req) {
       });
     }
 
-    // 5. RESPONSE NON-STREAMING
+    // NON-STREAMING RESPONSE
     if (!isStream) {
       const data = await upstreamResponse.json();
       data.model = clientModel;
@@ -125,7 +121,7 @@ export default async function handler(req) {
       });
     }
 
-    // 6. RESPONSE STREAMING (Raw Text Pass-through, Anti Putus)
+    // STREAMING RESPONSE (RAW TEXT PASS-THROUGH)
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
 
