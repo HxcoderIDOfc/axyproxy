@@ -34,7 +34,6 @@ export default async function handler(req) {
 
   try {
     const keyData = await get(clientApiKey);
-
     if (!keyData || keyData.active === false) {
       return new Response(JSON.stringify({ error: 'API Key tidak valid atau dinonaktifkan.' }), { 
         status: 401, 
@@ -44,7 +43,6 @@ export default async function handler(req) {
 
     const body = await req.json();
 
-    // Gunakan nama model asli dari client (axynity-M1 atau axynity-Xcode)
     let clientModel = body.model || "axynity-Xcode";
     if (clientModel.toLowerCase() === "axynity-m1") {
       clientModel = "axynity-M1";
@@ -54,7 +52,6 @@ export default async function handler(req) {
 
     const isStream = Boolean(body.stream);
 
-    // System Prompt
     const customSystemPrompt = {
       role: "system",
       content: `Kamu adalah ${clientModel}, asisten AI cerdas ciptaan Axynera dari Indonesia. DILARANG KERAS menyebutkan vendor lain. HANYA gunakan karakter latin/alfabet biasa (DILARANG Hanzi).`
@@ -71,7 +68,6 @@ export default async function handler(req) {
       rawMessages = [{ role: "user", content: "hallo" }];
     }
 
-    // Sanitasi format pesan agar aman dikirim ke upstream
     let safeMessages = rawMessages.map(msg => {
       let textContent = msg.content;
       if (Array.isArray(textContent)) {
@@ -84,8 +80,8 @@ export default async function handler(req) {
 
     safeMessages.unshift(customSystemPrompt);
 
-    // KIRIM MODEL LANGSUNG KE UPSTREAM (Tanpa diubah ke model lain)
     const upstreamPayload = {
+      ...body,
       model: clientModel,
       messages: safeMessages,
       stream: isStream
@@ -110,7 +106,6 @@ export default async function handler(req) {
       });
     }
 
-    // NON-STREAMING RESPONSE
     if (!isStream) {
       const data = await upstreamResponse.json();
       data.model = clientModel;
@@ -121,23 +116,10 @@ export default async function handler(req) {
       });
     }
 
-    // STREAMING RESPONSE (RAW TEXT PASS-THROUGH)
-    const encoder = new TextEncoder();
-    const decoder = new TextDecoder();
+    // Pass-through stream murni tanpa manipulasi string agresif yang bikin putus
+    const upstreamBody = upstreamResponse.body;
 
-    const stream = new TransformStream({
-      transform(chunk, controller) {
-        let text = decoder.decode(chunk, { stream: true });
-        
-        text = text.replace(/[\u4e00-\u9fa5]+/g, '');
-        text = text.replace(/(OpenAI|Anthropic|Google|DeepSeek|ChatGPT|Claude)/gi, "Axynera");
-        text = text.replace(/"model":\s*"[^"]+"/g, `"model":"${clientModel}"`);
-
-        controller.enqueue(encoder.encode(text));
-      }
-    });
-
-    return new Response(upstreamResponse.body.pipeThrough(stream), {
+    return new Response(upstreamBody, {
       headers: {
         ...corsHeaders,
         'Content-Type': 'text/event-stream; charset=utf-8',
