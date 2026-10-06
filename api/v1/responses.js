@@ -5,7 +5,6 @@ export const config = {
 };
 
 export default async function handler(req) {
-  // CORS Headers
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -61,7 +60,7 @@ export default async function handler(req) {
 
     const body = await req.json();
 
-    // 2. Transformasi request /v1/responses ke format Chat Completions
+    // 2. Mapping Model & Normalisasi Prompt
     const rawModel = (body.model || '').toLowerCase();
     let targetModelAlias = "Axynity-Xcode";
 
@@ -69,25 +68,34 @@ export default async function handler(req) {
       targetModelAlias = "Axynity-M1";
     }
 
-    const isStream = Boolean(body.stream);
+    // Tangkap input/messages dari payload /v1/responses Codex
+    let formattedMessages = [];
+    
+    if (body.messages && Array.isArray(body.messages)) {
+      formattedMessages = [...body.messages];
+    } else if (body.input) {
+      formattedMessages = [{ role: "user", content: body.input }];
+    } else if (body.prompt) {
+      formattedMessages = [{ role: "user", content: body.prompt }];
+    } else {
+      formattedMessages = [{ role: "user", content: "hallo" }];
+    }
 
-    // Ubah payload /v1/responses menjadi format /v1/chat/completions untuk upstream
-    const chatBody = {
+    // Sisipkan system prompt identitas Axynera
+    formattedMessages.unshift({
+      role: "system",
+      content: `Kamu adalah ${targetModelAlias}, asisten AI cerdas ciptaan Axynera dari Indonesia. Jawab secara jelas dan komunikatif. HANYA gunakan karakter latin/alfabet biasa (DILARANG karakter Cina/Hanzi).`
+    });
+
+    const isStream = body.stream !== undefined ? Boolean(body.stream) : true;
+
+    const chatPayload = {
       model: targetModelAlias,
-      stream: isStream,
-      messages: body.messages || [
-        {
-          role: "system",
-          content: `Kamu adalah ${targetModelAlias}, asisten AI cerdas yang dikembangkan oleh Axynera.`
-        },
-        {
-          role: "user",
-          content: body.input || body.prompt || "hallo"
-        }
-      ]
+      messages: formattedMessages,
+      stream: isStream
     };
 
-    // 3. Forward request ke Upstream 9Router
+    // 3. Request ke Upstream Router
     const NINEROUTER_URL = process.env.NINEROUTER_URL || 'https://router.nextura.my.id/v1/chat/completions';
     const NINEROUTER_KEY = process.env.NINEROUTER_KEY || 'sk-ee154e57bedea543-a8o084-89b677ad';
 
@@ -97,12 +105,12 @@ export default async function handler(req) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${NINEROUTER_KEY}`
       },
-      body: JSON.stringify(chatBody)
+      body: JSON.stringify(chatPayload)
     });
 
     if (!upstreamResponse.ok) {
       return new Response(await upstreamResponse.text(), { 
-        status: upstreamResponse.status, 
+        status: upstreamResponse.status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       });
     }
@@ -112,33 +120,23 @@ export default async function handler(req) {
       const data = await upstreamResponse.json();
       data.model = targetModelAlias;
       data.developer = "Axynera";
-      data.origin = "Indonesia";
-
       return new Response(JSON.stringify(data), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // 5. Streaming Response (SSE)
+    // 5. Streaming Response (SSE Transform)
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
-    let heartbeatInterval;
 
     const stream = new TransformStream({
-      start(controller) {
-        heartbeatInterval = setInterval(() => {
-          controller.enqueue(encoder.encode(': heartbeat ping\n\n'));
-        }, 3000);
-      },
       transform(chunk, controller) {
         let text = decoder.decode(chunk, { stream: true });
+        // Filter Hanzi & ganti nama vendor
         text = text.replace(/[\u4e00-\u9fa5]+/g, '');
-        text = text.replace(/"model":\s*"[^"]+"/g, `"model":"${targetModelAlias}"`);
+        text = text.replace(/(OpenAI|Anthropic|Google|DeepSeek|ChatGPT|Claude)/gi, "Axynera");
         controller.enqueue(encoder.encode(text));
-      },
-      flush() {
-        if (heartbeatInterval) clearInterval(heartbeatInterval);
       }
     });
 
@@ -148,7 +146,7 @@ export default async function handler(req) {
       headers: {
         ...corsHeaders,
         'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache, no-transform',
+        'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
       },
     });
