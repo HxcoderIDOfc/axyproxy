@@ -59,7 +59,7 @@ export default async function handler(req) {
 
     const body = await req.json();
 
-    const clientModel = body.model || "Axynity-Xcode";
+    const clientModel = body.model || "axynity-Xcode";
     const isStream = Boolean(body.stream);
 
     const customSystemPrompt = {
