@@ -33,75 +33,68 @@ export default async function handler(req) {
   const clientApiKey = authHeader.replace('Bearer ', '').trim();
 
   try {
-    // 1. Validasi API Key
     const keyData = await get(clientApiKey);
 
-    if (keyData === undefined || keyData === null || keyData === false) {
+    if (!keyData || keyData.active === false) {
       return new Response(JSON.stringify({ error: 'API Key tidak valid atau dinonaktifkan.' }), { 
         status: 401, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       });
     }
 
-    if (typeof keyData === 'object' && keyData !== null) {
-      if (keyData.active === false) {
-        return new Response(JSON.stringify({ error: 'API Key dinonaktifkan.' }), { 
-          status: 401, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        });
-      }
-      if (typeof keyData.quota === 'number' && keyData.quota <= 0) {
-        return new Response(JSON.stringify({ error: 'Kuota API Key telah habis.' }), { 
-          status: 402, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        });
-      }
-    }
-
     const body = await req.json();
 
-    // 2. Setup nama model (huruf 'a' kecil sesuai permintaan)
-    let clientModel = body.model || "axynity-Xcode";
-    if (clientModel.toLowerCase() === "axynity-m1") {
+    // 1. Pemetaan Model (Sesuai Permintaan: a kecil, M/X besar)
+    const rawModel = (body.model || "axynity-Xcode").toLowerCase();
+    let clientModel = "axynity-Xcode";
+    let upstreamModel = "gpt-4o-mini"; // Model valid di router
+
+    if (rawModel.includes("m1") || rawModel.includes("flash")) {
       clientModel = "axynity-M1";
-    } else if (clientModel.toLowerCase() === "axynity-xcode") {
-      clientModel = "axynity-Xcode";
+      upstreamModel = "gemini-1.5-flash"; // Model valid di router
     }
 
     const isStream = Boolean(body.stream);
 
-    // 3. System Prompt & Normalisasi Pesan
+    // 2. Format Pesan dan System Prompt
     const customSystemPrompt = {
       role: "system",
-      content: `Kamu adalah ${clientModel}, asisten AI cerdas dan serbaguna yang dikembangkan oleh Axynera.
-
-PANDUAN BERKOMUNIKASI:
-1. GAYA BAHASA: Gunakan Bahasa Indonesia yang natural, hangat, ramah, dan komunikatif.
-2. JAWABAN FOKUS: Utamakan langsung menjawab inti pertanyaan pengguna.
-3. IDENTITAS & DEVELOPER: Kamu adalah model AI ${clientModel} ciptaan Axynera dari Indonesia. DILARANG KERAS menyebutkan vendor/model lain.
-4. FILTER BAHASA: HANYA gunakan karakter latin/alfabet biasa. DILARANG KERAS menampilkan aksara Cina/Hanzi (汉字).
-5. PENULISAN KODE: Fokuskan analisa pada logika dan arsitektur kode yang bersih.`
+      content: `Kamu adalah ${clientModel}, asisten AI cerdas ciptaan Axynera dari Indonesia. DILARANG KERAS menyebutkan vendor lain. HANYA gunakan karakter latin/alfabet biasa (DILARANG Hanzi).`
     };
 
-    let formattedMessages = [];
+    let rawMessages = [];
     if (body.messages && Array.isArray(body.messages)) {
-      formattedMessages = [customSystemPrompt, ...body.messages];
+      rawMessages = body.messages;
     } else if (body.input) {
-      formattedMessages = [customSystemPrompt, { role: "user", content: body.input }];
+      rawMessages = [{ role: "user", content: body.input }];
     } else if (body.prompt) {
-      formattedMessages = [customSystemPrompt, { role: "user", content: body.prompt }];
+      rawMessages = [{ role: "user", content: body.prompt }];
     } else {
-      formattedMessages = [customSystemPrompt, { role: "user", content: "hallo" }];
+      rawMessages = [{ role: "user", content: "hallo" }];
     }
 
+    // SANITASI PESAN CODEX CLI: (Memastikan content selalu string, mencegah error jika Codex kirim object/array image-vision)
+    let safeMessages = rawMessages.map(msg => {
+      let textContent = msg.content;
+      if (Array.isArray(textContent)) {
+        textContent = textContent.map(c => c.text || (typeof c === 'string' ? c : '')).join('\n');
+      } else if (typeof textContent === 'object') {
+        textContent = JSON.stringify(textContent);
+      }
+      return { role: msg.role || "user", content: textContent || "" };
+    });
+
+    safeMessages.unshift(customSystemPrompt);
+
+    // 3. SANITASI PAYLOAD (Super Ketat)
+    // Codex mengirim parameter "tools" yang ditolak router, jadi JANGAN gunakan "...body"
     const upstreamPayload = {
-      ...body,
-      model: clientModel,
-      messages: formattedMessages,
+      model: upstreamModel,
+      messages: safeMessages,
       stream: isStream
     };
 
-    // 4. Request ke Upstream
+    // 4. Request ke Upstream (Router Nextura)
     const NINEROUTER_URL = process.env.NINEROUTER_URL || 'https://router.nextura.my.id/v1/chat/completions';
     const NINEROUTER_KEY = process.env.NINEROUTER_KEY || 'sk-ee154e57bedea543-a8o084-89b677ad';
 
@@ -121,51 +114,29 @@ PANDUAN BERKOMUNIKASI:
       });
     }
 
-    // -------------------------------------------------------------
-    // PENANGANAN 1: NON-STREAMING RESPONSE
-    // -------------------------------------------------------------
+    // 5. RESPONSE NON-STREAMING
     if (!isStream) {
       const data = await upstreamResponse.json();
-
       data.model = clientModel;
       data.developer = "Axynera";
-      data.origin = "Indonesia";
-
-      if (data.choices && Array.isArray(data.choices)) {
-        data.choices.forEach(choice => {
-          if (choice.message && choice.message.content) {
-            choice.message.content = choice.message.content
-              .replace(/[\u4e00-\u9fa5]+/g, '')
-              .replace(/(OpenAI|Anthropic|Google|DeepSeek|ChatGPT|Claude)/gi, "Axynera");
-          }
-        });
-      }
-
       return new Response(JSON.stringify(data), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // -------------------------------------------------------------
-    // PENANGANAN 2: STREAMING RESPONSE (ANTI PUTUS)
-    // -------------------------------------------------------------
+    // 6. RESPONSE STREAMING (Raw Text Pass-through, Anti Putus)
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
 
     const stream = new TransformStream({
       transform(chunk, controller) {
-        // Dekode chunk secara langsung
         let text = decoder.decode(chunk, { stream: true });
-
-        // Filter Hanzi dan ganti identitas (Manipulasi string langsung, BUKAN JSON.parse)
+        
         text = text.replace(/[\u4e00-\u9fa5]+/g, '');
         text = text.replace(/(OpenAI|Anthropic|Google|DeepSeek|ChatGPT|Claude)/gi, "Axynera");
-        
-        // Timpa nama model di dalam string JSON yang sedang lewat
         text = text.replace(/"model":\s*"[^"]+"/g, `"model":"${clientModel}"`);
 
-        // Langsung teruskan ke client
         controller.enqueue(encoder.encode(text));
       }
     });
