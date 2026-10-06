@@ -3,6 +3,7 @@
     { "src": "/v1/chat/completions", "dest": "/api/v1/chat/completions.js" },
     { "src": "/v1/messages", "dest": "/api/v1/messages.js" },
     { "src": "/v1/models", "dest": "/api/v1/models.js" },
+    { "src": "/v1/responses", "dest": "/api/v1/responses.js" },
     { "src": "/api/keys", "dest": "/api/v1/keys.js" }
   ]
 }
