@@ -8,6 +8,8 @@
     { "src": "/v1/audio/transcriptions", "dest": "/api/v1/audio/transcriptions.js" },
     { "src": "/v1/audio/speech", "dest": "/api/v1/audio/speech.js" },
     { "src": "/v1/responses", "dest": "/api/v1/responses.js" },
-    { "src": "/api/keys", "dest": "/api/v1/keys.js" }
+    { "src": "/api/keys", "dest": "/api/v1/keys.js" },
+    { "src": "/api/qris/create", "dest": "/api/qris/create.js" },
+    { "src": "/api/qris/status", "dest": "/api/qris/status.js" }
   ]
 }

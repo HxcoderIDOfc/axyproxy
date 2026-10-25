@@ -1,4 +1,4 @@
-import { get } from '@vercel/global-config';
+import { verifyApiKey } from '../auth.js';
 
 export const config = {
   runtime: 'edge',
@@ -27,15 +27,19 @@ export default async function handler(req) {
     }
 
     try {
-      const keyData = await get(apiKey);
+      const keyData = await verifyApiKey(apiKey);
       if (!keyData) {
-        return new Response(JSON.stringify({ error: 'API Key tidak ditemukan di Global Config' }), {
+        return new Response(JSON.stringify({ error: 'API Key tidak valid atau tidak terdaftar' }), {
           status: 404,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      return new Response(JSON.stringify({ success: true, data: keyData }), {
+      return new Response(JSON.stringify({
+        success: true,
+        valid: true,
+        data: keyData
+      }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -47,7 +51,7 @@ export default async function handler(req) {
     }
   }
 
-  return new Response(JSON.stringify({ error: 'Method not allowed. Penambahan key dilakukan via Vercel Dashboard.' }), {
+  return new Response(JSON.stringify({ error: 'Method not allowed.' }), {
     status: 405,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });

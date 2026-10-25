@@ -1,4 +1,4 @@
-import { get } from '@vercel/global-config';
+import { verifyApiKey } from '../auth.js';
 
 export const config = {
   runtime: 'edge',
@@ -33,7 +33,7 @@ export default async function handler(req) {
   const clientApiKey = authHeader.replace('Bearer ', '').trim();
 
   try {
-    const keyData = await get(clientApiKey);
+    const keyData = await verifyApiKey(clientApiKey);
     if (!keyData || keyData.active === false) {
       return new Response(JSON.stringify({ error: 'API Key tidak valid atau dinonaktifkan.' }), { 
         status: 401, 
