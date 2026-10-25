@@ -4,14 +4,30 @@ export const config = {
   runtime: 'edge',
 };
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, x-api-key',
+};
+
 export default async function handler(req) {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 200, headers: corsHeaders });
+  }
+
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 
   const authHeader = req.headers.get('authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return new Response(JSON.stringify({ error: 'Authorization header wajib diisi' }), { status: 401 });
+    return new Response(JSON.stringify({ error: 'Authorization header wajib diisi' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 
   const clientApiKey = authHeader.replace('Bearer ', '').trim();
@@ -21,15 +37,24 @@ export default async function handler(req) {
     const keyData = await get(clientApiKey);
 
     if (keyData === undefined || keyData === null || keyData === false) {
-      return new Response(JSON.stringify({ error: 'API Key tidak valid atau dinonaktifkan.' }), { status: 401 });
+      return new Response(JSON.stringify({ error: 'API Key tidak valid atau dinonaktifkan.' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     if (typeof keyData === 'object' && keyData !== null) {
       if (keyData.active === false) {
-        return new Response(JSON.stringify({ error: 'API Key dinonaktifkan.' }), { status: 401 });
+        return new Response(JSON.stringify({ error: 'API Key dinonaktifkan.' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
       if (typeof keyData.quota === 'number' && keyData.quota <= 0) {
-        return new Response(JSON.stringify({ error: 'Kuota API Key telah habis.' }), { status: 402 });
+        return new Response(JSON.stringify({ error: 'Kuota API Key telah habis.' }), {
+          status: 402,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
     }
 
@@ -47,7 +72,7 @@ export default async function handler(req) {
     const isStream = Boolean(body.stream);
     body.stream = isStream;
 
-    // 3. Inject System Prompt yang Lebih Natural
+    // 3. Inject System Prompt yang Natural
     const customSystemPrompt = {
       role: "system",
       content: `Kamu adalah ${targetModelAlias}, asisten AI cerdas dan serbaguna yang dikembangkan oleh Axynera.
@@ -68,9 +93,16 @@ PANDUAN BERKOMUNIKASI:
       body.messages = [customSystemPrompt];
     }
 
-    // 4. Request ke Upstream 9Router
+    // 4. Request ke Upstream 9Router (Ambil murni dari Environment Variable)
     const NINEROUTER_URL = process.env.NINEROUTER_URL || 'https://router.nextura.my.id/v1/chat/completions';
-    const NINEROUTER_KEY = process.env.NINEROUTER_KEY || 'sk-ee154e57bedea543-a8o084-89b677ad';
+    const NINEROUTER_KEY = process.env.NINEROUTER_KEY;
+
+    if (!NINEROUTER_KEY) {
+      return new Response(JSON.stringify({ error: 'Server configuration error: NINEROUTER_KEY environment variable is missing.' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const upstreamResponse = await fetch(NINEROUTER_URL, {
       method: 'POST',
@@ -82,7 +114,10 @@ PANDUAN BERKOMUNIKASI:
     });
 
     if (!upstreamResponse.ok) {
-      return new Response(await upstreamResponse.text(), { status: upstreamResponse.status });
+      return new Response(await upstreamResponse.text(), {
+        status: upstreamResponse.status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // -------------------------------------------------------------
@@ -99,7 +134,6 @@ PANDUAN BERKOMUNIKASI:
       if (data.choices && Array.isArray(data.choices)) {
         data.choices.forEach(choice => {
           if (choice.message && choice.message.content) {
-            // Filter karakter Hanzi dan ganti nama vendor
             choice.message.content = choice.message.content
               .replace(/[\u4e00-\u9fa5]+/g, '')
               .replace(/(OpenAI|Anthropic|Google|DeepSeek|ChatGPT|Claude)/gi, "Axynera");
@@ -109,7 +143,7 @@ PANDUAN BERKOMUNIKASI:
 
       return new Response(JSON.stringify(data), {
         status: 200,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
@@ -130,7 +164,6 @@ PANDUAN BERKOMUNIKASI:
       transform(chunk, controller) {
         let text = decoder.decode(chunk, { stream: true });
 
-        // Filter Hanzi (Cina) & ganti string model upstream secara kasar di seluruh teks
         text = text.replace(/[\u4e00-\u9fa5]+/g, '');
         text = text.replace(/"model":\s*"[^"]+"/g, `"model":"${targetModelAlias}"`);
 
@@ -175,6 +208,7 @@ PANDUAN BERKOMUNIKASI:
 
     return new Response(transformedStream, {
       headers: {
+        ...corsHeaders,
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache, no-transform',
         'Connection': 'keep-alive',
@@ -183,6 +217,9 @@ PANDUAN BERKOMUNIKASI:
     });
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'Proxy Internal Error', details: error.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: 'Proxy Internal Error', details: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 }

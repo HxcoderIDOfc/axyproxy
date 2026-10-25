@@ -4,14 +4,30 @@ export const config = {
   runtime: 'edge',
 };
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, x-api-key',
+};
+
 export default async function handler(req) {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 200, headers: corsHeaders });
+  }
+
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 
   const authHeader = req.headers.get('authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return new Response(JSON.stringify({ error: 'Authorization header wajib diisi' }), { status: 401 });
+    return new Response(JSON.stringify({ error: 'Authorization header wajib diisi' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 
   const clientApiKey = authHeader.replace('Bearer ', '').trim();
@@ -21,15 +37,24 @@ export default async function handler(req) {
     const keyData = await get(clientApiKey);
 
     if (keyData === undefined || keyData === null || keyData === false) {
-      return new Response(JSON.stringify({ error: 'API Key tidak valid atau dinonaktifkan.' }), { status: 401 });
+      return new Response(JSON.stringify({ error: 'API Key tidak valid atau dinonaktifkan.' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     if (typeof keyData === 'object' && keyData !== null) {
       if (keyData.active === false) {
-        return new Response(JSON.stringify({ error: 'API Key dinonaktifkan.' }), { status: 401 });
+        return new Response(JSON.stringify({ error: 'API Key dinonaktifkan.' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
       if (typeof keyData.quota === 'number' && keyData.quota <= 0) {
-        return new Response(JSON.stringify({ error: 'Kuota API Key telah habis.' }), { status: 402 });
+        return new Response(JSON.stringify({ error: 'Kuota API Key telah habis.' }), {
+          status: 402,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
     }
 
@@ -66,9 +91,16 @@ PANDUAN BERKOMUNIKASI:
       body.messages.unshift({ role: "system", content: systemInstruction });
     }
 
-    // 4. Request ke Upstream 9Router
+    // 4. Request ke Upstream 9Router (Ambil murni dari Environment Variable)
     const NINEROUTER_URL = process.env.NINEROUTER_COMPLETIONS_URL || process.env.NINEROUTER_URL || 'https://router.nextura.my.id/v1/completions';
-    const NINEROUTER_KEY = process.env.NINEROUTER_KEY || 'sk-ee154e57bedea543-a8o084-89b677ad';
+    const NINEROUTER_KEY = process.env.NINEROUTER_KEY;
+
+    if (!NINEROUTER_KEY) {
+      return new Response(JSON.stringify({ error: 'Server configuration error: NINEROUTER_KEY environment variable is missing.' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const upstreamResponse = await fetch(NINEROUTER_URL, {
       method: 'POST',
@@ -80,7 +112,10 @@ PANDUAN BERKOMUNIKASI:
     });
 
     if (!upstreamResponse.ok) {
-      return new Response(await upstreamResponse.text(), { status: upstreamResponse.status });
+      return new Response(await upstreamResponse.text(), {
+        status: upstreamResponse.status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // -------------------------------------------------------------
@@ -100,17 +135,12 @@ PANDUAN BERKOMUNIKASI:
               .replace(/[\u4e00-\u9fa5]+/g, '')
               .replace(/(OpenAI|Anthropic|Google|DeepSeek|ChatGPT|Claude)/gi, "Axynera");
           }
-          if (choice.message && choice.message.content) {
-            choice.message.content = choice.message.content
-              .replace(/[\u4e00-\u9fa5]+/g, '')
-              .replace(/(OpenAI|Anthropic|Google|DeepSeek|ChatGPT|Claude)/gi, "Axynera");
-          }
         });
       }
 
       return new Response(JSON.stringify(data), {
         status: 200,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
@@ -119,15 +149,8 @@ PANDUAN BERKOMUNIKASI:
     // -------------------------------------------------------------
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
-    let heartbeatInterval;
 
     const stream = new TransformStream({
-      start(controller) {
-        heartbeatInterval = setInterval(() => {
-          controller.enqueue(encoder.encode(': heartbeat ping\n\n'));
-        }, 3000);
-      },
-
       transform(chunk, controller) {
         let text = decoder.decode(chunk, { stream: true });
 
@@ -142,18 +165,10 @@ PANDUAN BERKOMUNIKASI:
               const data = JSON.parse(jsonStr);
 
               data.model = targetModelAlias;
-              data.developer = "Axynera";
-              data.origin = "Indonesia";
 
-              if (data.choices && data.choices[0]) {
-                if (data.choices[0].text) {
-                  data.choices[0].text = data.choices[0].text
-                    .replace(/(OpenAI|Anthropic|Google|DeepSeek|ChatGPT|Claude)/gi, "Axynera");
-                }
-                if (data.choices[0].delta?.content) {
-                  data.choices[0].delta.content = data.choices[0].delta.content
-                    .replace(/(OpenAI|Anthropic|Google|DeepSeek|ChatGPT|Claude)/gi, "Axynera");
-                }
+              if (data.choices && data.choices[0]?.text) {
+                data.choices[0].text = data.choices[0].text
+                  .replace(/(OpenAI|Anthropic|Google|DeepSeek|ChatGPT|Claude)/gi, "Axynera");
               }
 
               return `data: ${JSON.stringify(data)}`;
@@ -165,10 +180,6 @@ PANDUAN BERKOMUNIKASI:
         });
 
         controller.enqueue(encoder.encode(processedLines.join('\n')));
-      },
-
-      flush() {
-        if (heartbeatInterval) clearInterval(heartbeatInterval);
       }
     });
 
@@ -176,6 +187,7 @@ PANDUAN BERKOMUNIKASI:
 
     return new Response(transformedStream, {
       headers: {
+        ...corsHeaders,
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache, no-transform',
         'Connection': 'keep-alive',
@@ -184,6 +196,9 @@ PANDUAN BERKOMUNIKASI:
     });
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'Proxy Internal Error', details: error.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: 'Proxy Internal Error', details: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 }
