@@ -60,7 +60,7 @@ export default async function handler(req) {
 
     const body = await req.json();
 
-    // 2. Normalisasi & Mapping Alias Model (Case-Insensitive)
+    // 2. Normalisasi & Mapping Alias Model
     const rawModel = (body.model || '').toLowerCase();
     let targetModelAlias = "Axynity-Xcode";
 
@@ -68,11 +68,31 @@ export default async function handler(req) {
       targetModelAlias = "Axynity-M1";
     }
 
-    // Pilihan streaming mengikuti request client (default: false jika tidak ada)
+    // Deteksi apakah request mengirim gambar (Vision / Multimodal)
+    const hasImage = body.messages && Array.isArray(body.messages) && body.messages.some(m => {
+      if (Array.isArray(m.content)) {
+        return m.content.some(c => c.type === 'image_url');
+      }
+      return false;
+    });
+
+    let upstreamModel = body.model || "axynity-M1";
+    if (hasImage) {
+      // Gunakan model vision terverifikasi aktif & stabil
+      upstreamModel = "cl/nvidia/nemotron-3.5-super-vl:free";
+    } else if (rawModel.includes("m1") || rawModel.includes("flash")) {
+      upstreamModel = "axynity-M1";
+    } else if (rawModel.includes("xcode") || rawModel.includes("pro")) {
+      upstreamModel = "axynity-Xcode";
+    }
+
+    body.model = upstreamModel;
+
+    // Pilihan streaming mengikuti request client
     const isStream = Boolean(body.stream);
     body.stream = isStream;
 
-    // 3. Inject System Prompt yang Natural
+    // 3. Inject System Prompt
     const customSystemPrompt = {
       role: "system",
       content: `Kamu adalah ${targetModelAlias}, asisten AI cerdas dan serbaguna yang dikembangkan oleh Axynera.
@@ -93,7 +113,7 @@ PANDUAN BERKOMUNIKASI:
       body.messages = [customSystemPrompt];
     }
 
-    // 4. Request ke Upstream 9Router (Ambil murni dari Environment Variable)
+    // 4. Request ke Upstream 9Router
     const NINEROUTER_URL = process.env.NINEROUTER_URL || 'https://router.nextura.my.id/v1/chat/completions';
     const NINEROUTER_KEY = process.env.NINEROUTER_KEY;
 
@@ -114,7 +134,8 @@ PANDUAN BERKOMUNIKASI:
     });
 
     if (!upstreamResponse.ok) {
-      return new Response(await upstreamResponse.text(), {
+      const errText = await upstreamResponse.text();
+      return new Response(errText, {
         status: upstreamResponse.status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -124,7 +145,25 @@ PANDUAN BERKOMUNIKASI:
     // PENANGANAN 1: NON-STREAMING RESPONSE (JSON biasa)
     // -------------------------------------------------------------
     if (!isStream) {
-      const data = await upstreamResponse.json();
+      const rawText = await upstreamResponse.text();
+      let data;
+      try {
+        const cleanedJsonStr = rawText.replace(/\n*data:\s*\[DONE\].*$/s, '').trim();
+        data = JSON.parse(cleanedJsonStr);
+      } catch (err) {
+        const firstBrace = rawText.indexOf('{');
+        const lastBrace = rawText.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1) {
+          data = JSON.parse(rawText.slice(firstBrace, lastBrace + 1));
+        } else {
+          throw err;
+        }
+      }
+
+      // Normalisasi jika 9Router membungkus response di dalam { data: { choices: [...] } }
+      if (data.data && data.data.choices && !data.choices) {
+        data = { ...data.data, success: data.success };
+      }
 
       // Timpa identitas & model
       data.model = targetModelAlias;
@@ -135,6 +174,7 @@ PANDUAN BERKOMUNIKASI:
         data.choices.forEach(choice => {
           if (choice.message && choice.message.content) {
             choice.message.content = choice.message.content
+              .replace(/^[\r\n\s]+/, '') // Hapus enter kosong di awal kalimat!
               .replace(/[\u4e00-\u9fa5]+/g, '')
               .replace(/(OpenAI|Anthropic|Google|DeepSeek|ChatGPT|Claude)/gi, "Axynera");
           }
