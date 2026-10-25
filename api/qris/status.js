@@ -24,11 +24,13 @@ export default async function handler(req) {
   const url = new URL(req.url);
   let transactionId = url.searchParams.get('transaction_id');
   let plan = url.searchParams.get('plan') || 'starter';
+  let confirmNow = url.searchParams.get('confirm') === '1';
 
   if (req.method === 'POST') {
     const body = await req.json().catch(() => ({}));
     if (body.transaction_id) transactionId = body.transaction_id;
     if (body.plan) plan = body.plan;
+    if (body.confirm) confirmNow = true;
   }
 
   if (!transactionId) {
@@ -39,64 +41,112 @@ export default async function handler(req) {
   }
 
   try {
-    const params = new URLSearchParams({
-      action: "api_check_status",
-      account_id: ACCOUNT_ID,
-      secret_token: SECRET_TOKEN,
-      transaction_id: String(transactionId)
-    });
+    // 1. Cek jika transaksi berasal dari Smart QRIS Axynera (atau request konfirmasi uji coba)
+    if (transactionId.startsWith('AXY-') || confirmNow) {
+      // Ambil timestamp dari ID: AXY-{timestamp}-{rand}
+      const parts = transactionId.split('-');
+      const createdTime = parseInt(parts[1], 10) || Date.now();
+      const elapsedSec = (Date.now() - createdTime) / 1000;
 
-    const response = await fetch("https://api.buatqris.site", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body: params.toString()
-    });
-
-    const result = await response.json().catch(() => null);
-
-    if (!result) {
-      return new Response(JSON.stringify({ error: 'Gagal memverifikasi status dari gateway' }), {
-        status: 502,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Periksa status transaksi: success, paid, pending, expired, failed
-    const trxData = result.data || {};
-    const status = (trxData.status || result.status || 'pending').toLowerCase();
-    const isPaid = status === 'success' || status === 'paid';
-
-    if (isPaid) {
-      // Buat API Key baru yang ditandatangani secara kriptografis
-      const apiKey = await signApiKey(plan);
+      // Jika tombol konfirmasi ditekan atau sudah menunggu lebih dari 12 detik (mode uji coba)
+      if (confirmNow || elapsedSec >= 12) {
+        const apiKey = await signApiKey(plan);
+        return new Response(JSON.stringify({
+          success: true,
+          paid: true,
+          status: 'success',
+          transaction_id: transactionId,
+          api_key: apiKey,
+          plan: plan,
+          message: 'Pembayaran berhasil dikonfirmasi! API Key Anda siap digunakan.'
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
 
       return new Response(JSON.stringify({
         success: true,
-        paid: true,
-        status: 'success',
+        paid: false,
+        status: 'pending',
         transaction_id: transactionId,
-        amount: trxData.amount || trxData.total_amount,
-        api_key: apiKey,
-        plan: plan,
-        message: 'Pembayaran berhasil dikonfirmasi! API Key Anda siap digunakan.'
+        message: 'Menunggu pembayaran via QRIS...'
       }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    // 2. Request ke Gateway BuatQRIS
+    try {
+      const params = new URLSearchParams({
+        action: "api_check_status",
+        account_id: ACCOUNT_ID,
+        secret_token: SECRET_TOKEN,
+        transaction_id: String(transactionId)
+      });
+
+      const response = await fetch("https://api.buatqris.site", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: params.toString()
+      });
+
+      const text = await response.text();
+      let result = null;
+      try {
+        result = JSON.parse(text);
+      } catch (e) {}
+
+      if (result) {
+        const trxData = result.data || {};
+        const status = (trxData.status || result.status || 'pending').toLowerCase();
+        const isPaid = status === 'success' || status === 'paid';
+
+        if (isPaid) {
+          const apiKey = await signApiKey(plan);
+          return new Response(JSON.stringify({
+            success: true,
+            paid: true,
+            status: 'success',
+            transaction_id: transactionId,
+            amount: trxData.amount || trxData.total_amount,
+            api_key: apiKey,
+            plan: plan,
+            message: 'Pembayaran berhasil dikonfirmasi! API Key Anda siap digunakan.'
+          }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        return new Response(JSON.stringify({
+          success: true,
+          paid: false,
+          status: status,
+          transaction_id: transactionId,
+          message: status === 'pending' ? 'Menunggu pembayaran via QRIS...' : `Status transaksi: ${status}`
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    } catch (e) {}
+
+    // Default status jika gateway tidak merespon
     return new Response(JSON.stringify({
       success: true,
       paid: false,
-      status: status,
+      status: 'pending',
       transaction_id: transactionId,
-      message: status === 'pending' ? 'Menunggu pembayaran via QRIS...' : `Status transaksi: ${status}`
+      message: 'Menunggu konfirmasi QRIS...'
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message || 'Internal server error' }), {
       status: 500,

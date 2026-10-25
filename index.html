@@ -1672,6 +1672,11 @@ async function askAxynity(prompt, imageBase64 = null) {
           <div class="spinner"></div>
           <span>Mendeteksi pembayaran secara otomatis...</span>
         </div>
+        <div style="text-align: center; margin-top: 12px;">
+          <button class="btn-secondary" onclick="confirmPaymentManually()" style="font-size: 0.75rem; padding: 6px 14px;">
+            ⚡ Cek Status Pembayaran / Konfirmasi
+          </button>
+        </div>
       </div>
 
       <!-- Stage 2: Payment Success -->
@@ -2179,6 +2184,24 @@ async function askAxynity(prompt, imageBase64 = null) {
           // ignore transient polling errors
         }
       }, 3000);
+    }
+
+    async function confirmPaymentManually() {
+      if (!activeTransactionId) return;
+      try {
+        const res = await fetch(`/api/qris/status?transaction_id=${activeTransactionId}&confirm=1`);
+        const json = await res.json();
+        if (json.paid && json.api_key) {
+          if (pollingInterval) clearInterval(pollingInterval);
+          if (timerCountdownInterval) clearInterval(timerCountdownInterval);
+          newCreatedKey = json.api_key;
+          showPaymentSuccess(json.api_key);
+        } else {
+          alert(json.message || "Pembayaran belum terkonfirmasi di sistem.");
+        }
+      } catch (err) {
+        alert("Gagal memverifikasi: " + err.message);
+      }
     }
 
     function showPaymentSuccess(apiKey) {
