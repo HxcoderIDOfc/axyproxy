@@ -44,7 +44,7 @@ export default function handler(req) {
       },
       {
         "id": "Axynity-Image",
-        "name": "Axynity FLUX Vision Image",
+        "name": "Axynity Vision Image",
         "object": "model",
         "created": 1700000000,
         "owned_by": "Axynera",
