@@ -52,6 +52,18 @@ export default function handler(req) {
         "capabilities": {
           "image_generation": true
         }
+      },
+      {
+        "id": "Axynity-Audio",
+        "name": "Axynity Voice & Speech AI",
+        "object": "model",
+        "created": 1700000000,
+        "owned_by": "Axynera",
+        "origin": "Indonesia",
+        "capabilities": {
+          "speech_to_text": true,
+          "text_to_speech": true
+        }
       }
     ]
   }), {

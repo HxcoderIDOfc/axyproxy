@@ -73,15 +73,17 @@
             font-size: 0.75rem;
             font-weight: 600;
             box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light);
+            transition: all 0.3s ease;
         }
 
         .pulse-dot {
-            width: 6px;
-            height: 6px;
+            width: 8px;
+            height: 8px;
             background-color: var(--success);
             border-radius: 50%;
             box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
             animation: pulse 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+            transition: all 0.3s ease;
         }
 
         @keyframes pulse {
@@ -201,17 +203,18 @@
                 <h1>Axynera Proxy</h1>
                 <p>System Live Latency & Availability Monitor</p>
             </div>
-            <div class="status-badge">
-                <div class="pulse-dot"></div>
-                Operational
+            <div class="status-badge" id="system-status-badge">
+                <div class="pulse-dot" id="system-pulse-dot"></div>
+                <span id="system-status-text">Checking System...</span>
             </div>
         </div>
 
+        <!-- Axynity-M1 -->
         <div class="card">
             <div class="card-top">
                 <div class="model-info">
                     <span class="model-name">Axynity-M1</span>
-                    <span class="model-sub">Primary LLM Engine</span>
+                    <span class="model-sub">Primary LLM Engine & Vision</span>
                 </div>
                 <div class="metrics-group">
                     <div>
@@ -229,6 +232,7 @@
             </div>
         </div>
 
+        <!-- Axynity-Xcode -->
         <div class="card">
             <div class="card-top">
                 <div class="model-info">
@@ -251,8 +255,31 @@
             </div>
         </div>
 
+        <!-- Axynity-Image -->
+        <div class="card">
+            <div class="card-top">
+                <div class="model-info">
+                    <span class="model-name">Axynity-Image</span>
+                    <span class="model-sub">Text-to-Image Engine (FLUX 2)</span>
+                </div>
+                <div class="metrics-group">
+                    <div>
+                        <div class="metric-val" id="image-ping">--</div>
+                        <div class="metric-lbl">Latency</div>
+                    </div>
+                    <div>
+                        <div class="metric-val" style="color: var(--success);" id="image-uptime">100%</div>
+                        <div class="metric-lbl">Uptime</div>
+                    </div>
+                </div>
+            </div>
+            <div class="canvas-box">
+                <canvas id="c-image"></canvas>
+            </div>
+        </div>
+
         <div class="footer-tools">
-            <span>Auto-refresh signal stream</span>
+            <span>Real-time Health Ping to /v1/models</span>
             <div class="live-counter">
                 <span>Total Live Requests:</span>
                 <span class="counter-badge" id="req-counter">1,543</span>
@@ -263,15 +290,20 @@
     <script>
         const BLOCKS = 15;
         let totalRequests = 1543;
-        
-        // Default semua hijau (2 = Hijau, 1 = Kuning, 0 = Merah)
+
+        // Status code: 
+        // 2 = Hijau (Normal/Healthy)
+        // 1 = Kuning (High Latency > 300ms)
+        // 0 = Merah (DOWN / Error)
         const modelsData = {
-            m1: { statusArr: Array(BLOCKS).fill(2), latencyArr: Array(BLOCKS).fill(40) },
-            xcode: { statusArr: Array(BLOCKS).fill(2), latencyArr: Array(BLOCKS).fill(48) }
+            m1: { statusArr: Array(BLOCKS).fill(2), latencyArr: Array(BLOCKS).fill(35) },
+            xcode: { statusArr: Array(BLOCKS).fill(2), latencyArr: Array(BLOCKS).fill(42) },
+            image: { statusArr: Array(BLOCKS).fill(2), latencyArr: Array(BLOCKS).fill(55) }
         };
 
         function initCanvas(id) {
             const canvas = document.getElementById(id);
+            if (!canvas) return null;
             const rect = canvas.getBoundingClientRect();
             canvas.width = rect.width * 2;
             canvas.height = rect.height * 2;
@@ -282,8 +314,10 @@
 
         const cM1 = initCanvas('c-m1');
         const cXcode = initCanvas('c-xcode');
+        const cImage = initCanvas('c-image');
 
         function renderBlocks(target, statusArr) {
+            if (!target) return;
             const { ctx, width, height } = target;
             ctx.clearRect(0, 0, width, height);
 
@@ -296,11 +330,11 @@
                 const x = i * (blockW + gap);
 
                 if (val === 2) {
-                    ctx.fillStyle = '#10b981'; // Hijau
+                    ctx.fillStyle = '#10b981'; // Hijau (Normal)
                 } else if (val === 1) {
-                    ctx.fillStyle = '#f59e0b'; // Kuning
+                    ctx.fillStyle = '#f59e0b'; // Kuning (Ping Tinggi)
                 } else {
-                    ctx.fillStyle = '#ef4444'; // Merah
+                    ctx.fillStyle = '#ef4444'; // Merah (DOWN)
                 }
 
                 ctx.beginPath();
@@ -321,13 +355,14 @@
             const pingEl = document.getElementById(`${key}-ping`);
             const uptimeEl = document.getElementById(`${key}-uptime`);
 
+            // Hitung uptime: hanya merah (0) yang mengurangi uptime
             const healthyCount = data.statusArr.filter(s => s > 0).length;
             const uptime = Math.round((healthyCount / BLOCKS) * 100);
             uptimeEl.innerText = `${uptime}%`;
-            uptimeEl.style.color = uptime >= 80 ? 'var(--success)' : 'var(--error)';
+            uptimeEl.style.color = uptime >= 90 ? 'var(--success)' : (uptime >= 70 ? 'var(--warning)' : 'var(--error)');
 
             if (currentStatus === 0) {
-                pingEl.innerText = 'ERR';
+                pingEl.innerText = 'DOWN';
                 pingEl.style.color = 'var(--error)';
             } else if (currentStatus === 1) {
                 pingEl.innerText = `${currentPing}ms`;
@@ -338,56 +373,94 @@
             }
         }
 
-        setInterval(() => {
-            ['m1', 'xcode'].forEach(key => {
+        function updateSystemBadge(isAnyDown, isAnySlow) {
+            const badge = document.getElementById('system-status-badge');
+            const dot = document.getElementById('system-pulse-dot');
+            const text = document.getElementById('system-status-text');
+
+            if (isAnyDown) {
+                badge.style.color = 'var(--error)';
+                dot.style.backgroundColor = 'var(--error)';
+                text.innerText = 'System Outage';
+            } else if (isAnySlow) {
+                badge.style.color = 'var(--warning)';
+                dot.style.backgroundColor = 'var(--warning)';
+                text.innerText = 'High Latency';
+            } else {
+                badge.style.color = 'var(--success)';
+                dot.style.backgroundColor = 'var(--success)';
+                text.innerText = 'All Systems Operational';
+            }
+        }
+
+        // Fungsi Ping Nyata ke API Proxy (/v1/models)
+        async function checkApiHealth() {
+            const startTime = performance.now();
+            let isDown = false;
+            let latency = 0;
+
+            try {
+                const res = await fetch('/v1/models', { cache: 'no-store' });
+                latency = Math.round(performance.now() - startTime);
+
+                if (!res.ok) {
+                    isDown = true;
+                }
+            } catch (err) {
+                isDown = true;
+            }
+
+            // Tentukan status berdasarkan hasil nyata:
+            // Hanya MERAH jika benar-benar down (fetch gagal atau error 500)
+            // KUNING jika ping tinggi (> 350ms)
+            // HIJAU jika lancar
+            ['m1', 'xcode', 'image'].forEach(key => {
                 const data = modelsData[key];
-                
-                const rand = Math.random();
-                let newStatus = 2; // Normal hijau
-                let newPing = Math.floor(30 + Math.random() * 25);
+                let modelStatus = 2; // Default normal hijau
+                let modelPing = latency;
 
-                // Peluang kecil terjadi anomali/error di ujung kanan
-                if (rand > 0.92 && rand <= 0.97) {
-                    newStatus = 1; // Kuning (Ping tinggi)
-                    newPing = Math.floor(320 + Math.random() * 100);
-                } else if (rand > 0.97) {
-                    // ERROR: Nambah 2 bar merah sekaligus di ujung kanan
-                    data.statusArr.shift();
-                    data.statusArr.push(0);
-                    data.latencyArr.shift();
-                    data.latencyArr.push(0);
-
-                    data.statusArr.shift();
-                    data.statusArr.push(0);
-                    data.latencyArr.shift();
-                    data.latencyArr.push(0);
-
-                    if (key === 'm1') renderBlocks(cM1, data.statusArr);
-                    if (key === 'xcode') renderBlocks(cXcode, data.statusArr);
-                    refreshMetrics(key);
-                    return;
+                if (isDown) {
+                    modelStatus = 0; // HANYA MERAH JIKA BENAR-BENAR DOWN
+                    modelPing = 0;
+                } else if (modelPing > 350) {
+                    modelStatus = 1; // KUNING JIKA PING TINGGI
+                } else {
+                    modelStatus = 2; // HIJAU
                 }
 
-                // Pergerakan normal (Geser 1 bar ke kanan)
+                // Geser bar status
                 data.statusArr.shift();
-                data.statusArr.push(newStatus);
+                data.statusArr.push(modelStatus);
+
                 data.latencyArr.shift();
-                data.latencyArr.push(newPing);
+                data.latencyArr.push(modelPing);
 
                 if (key === 'm1') renderBlocks(cM1, data.statusArr);
                 if (key === 'xcode') renderBlocks(cXcode, data.statusArr);
+                if (key === 'image') renderBlocks(cImage, data.statusArr);
 
                 refreshMetrics(key);
             });
 
-            totalRequests += Math.floor(1 + Math.random() * 4);
-            document.getElementById('req-counter').innerText = totalRequests.toLocaleString('id-ID');
-        }, 1000);
+            const anyDown = isDown;
+            const anySlow = !isDown && latency > 350;
+            updateSystemBadge(anyDown, anySlow);
 
+            totalRequests += Math.floor(1 + Math.random() * 3);
+            document.getElementById('req-counter').innerText = totalRequests.toLocaleString('id-ID');
+        }
+
+        // Render awal
         renderBlocks(cM1, modelsData.m1.statusArr);
         renderBlocks(cXcode, modelsData.xcode.statusArr);
+        renderBlocks(cImage, modelsData.image.statusArr);
         refreshMetrics('m1');
         refreshMetrics('xcode');
+        refreshMetrics('image');
+
+        // Jalankan ping pertama langsung, lalu ulangi tiap 3 detik
+        checkApiHealth();
+        setInterval(checkApiHealth, 3000);
     </script>
 </body>
 </html>
