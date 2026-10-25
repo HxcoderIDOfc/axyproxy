@@ -179,14 +179,12 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            color: var(--text-main);
-            font-weight: 600;
         }
 
         .counter-badge {
-            background: #e4e7ec;
-            color: #0284c7;
-            padding: 4px 10px;
+            background-color: var(--bg-card);
+            color: #2563eb;
+            padding: 2px 8px;
             border-radius: 8px;
             font-family: monospace;
             font-size: 0.8125rem;
@@ -205,7 +203,7 @@
             </div>
             <div class="status-badge" id="system-status-badge">
                 <div class="pulse-dot" id="system-pulse-dot"></div>
-                <span id="system-status-text">Checking System...</span>
+                <span id="system-status-text">Operational</span>
             </div>
         </div>
 
@@ -278,6 +276,29 @@
             </div>
         </div>
 
+        <!-- Axynity-Audio -->
+        <div class="card">
+            <div class="card-top">
+                <div class="model-info">
+                    <span class="model-name">Axynity-Audio</span>
+                    <span class="model-sub">Voice & Speech Engine (TTS / STT)</span>
+                </div>
+                <div class="metrics-group">
+                    <div>
+                        <div class="metric-val" id="audio-ping">--</div>
+                        <div class="metric-lbl">Latency</div>
+                    </div>
+                    <div>
+                        <div class="metric-val" style="color: var(--success);" id="audio-uptime">100%</div>
+                        <div class="metric-lbl">Uptime</div>
+                    </div>
+                </div>
+            </div>
+            <div class="canvas-box">
+                <canvas id="c-audio"></canvas>
+            </div>
+        </div>
+
         <div class="footer-tools">
             <span>Real-time Health Ping to /v1/models</span>
             <div class="live-counter">
@@ -291,15 +312,8 @@
         const BLOCKS = 15;
         let totalRequests = 1543;
 
-        // Status code: 
-        // 2 = Hijau (Normal/Healthy)
-        // 1 = Kuning (High Latency > 300ms)
-        // 0 = Merah (DOWN / Error)
-        const modelsData = {
-            m1: { statusArr: Array(BLOCKS).fill(2), latencyArr: Array(BLOCKS).fill(35) },
-            xcode: { statusArr: Array(BLOCKS).fill(2), latencyArr: Array(BLOCKS).fill(42) },
-            image: { statusArr: Array(BLOCKS).fill(2), latencyArr: Array(BLOCKS).fill(55) }
-        };
+        const models = ['m1', 'xcode', 'image', 'audio'];
+        const canvases = {};
 
         function initCanvas(id) {
             const canvas = document.getElementById(id);
@@ -312,9 +326,50 @@
             return { ctx, width: rect.width, height: rect.height };
         }
 
-        const cM1 = initCanvas('c-m1');
-        const cXcode = initCanvas('c-xcode');
-        const cImage = initCanvas('c-image');
+        function reinitCanvases() {
+            models.forEach(m => {
+                canvases[m] = initCanvas(`c-${m}`);
+            });
+        }
+
+        reinitCanvases();
+        window.addEventListener('resize', () => {
+            reinitCanvases();
+            renderCurrentState();
+        });
+
+        // Logika Bar Sinyal Jaringan (Real-time Signal Indicator):
+        // - Jika DOWN: MERAH SE-BAR (15 bar merah solid)
+        // - Jika Normal (< 200ms): HIJAU SE-BAR PENUH (15 bar hijau)
+        // - Jika Ping Tinggi (200 - 350ms): 12 bar hijau, 3 bar kuning di kanan
+        // - Jika Ping Sangat Tinggi (350 - 600ms): 9 bar hijau, 6 bar kuning/oranye di kanan
+        // - Jika Parah (> 600ms): 8 bar kuning, 7 bar merah di kanan
+        // * Begitu koneksi normal: SEMUA BAR LANGSUNG HIJAU LAGI seketika (tidak berjalan/geser ke belakang!)
+        function calculateSignalBars(ping, isDown) {
+            if (isDown) {
+                return Array(BLOCKS).fill(0); // Merah se-bar penuh
+            }
+
+            if (ping <= 200) {
+                return Array(BLOCKS).fill(2); // Hijau se-bar penuh
+            }
+
+            if (ping <= 350) {
+                const arr = Array(BLOCKS).fill(2);
+                for (let i = BLOCKS - 3; i < BLOCKS; i++) arr[i] = 1;
+                return arr;
+            }
+
+            if (ping <= 600) {
+                const arr = Array(BLOCKS).fill(2);
+                for (let i = BLOCKS - 6; i < BLOCKS; i++) arr[i] = 1;
+                return arr;
+            }
+
+            const arr = Array(BLOCKS).fill(1);
+            for (let i = BLOCKS - 7; i < BLOCKS; i++) arr[i] = 0;
+            return arr;
+        }
 
         function renderBlocks(target, statusArr) {
             if (!target) return;
@@ -330,11 +385,11 @@
                 const x = i * (blockW + gap);
 
                 if (val === 2) {
-                    ctx.fillStyle = '#10b981'; // Hijau (Normal)
+                    ctx.fillStyle = '#10b981'; // Hijau (Normal/Sinyal Bagus)
                 } else if (val === 1) {
                     ctx.fillStyle = '#f59e0b'; // Kuning (Ping Tinggi)
                 } else {
-                    ctx.fillStyle = '#ef4444'; // Merah (DOWN)
+                    ctx.fillStyle = '#ef4444'; // Merah (DOWN / Gangguan)
                 }
 
                 ctx.beginPath();
@@ -347,29 +402,40 @@
             });
         }
 
-        function refreshMetrics(key) {
-            const data = modelsData[key];
-            const currentStatus = data.statusArr[BLOCKS - 1];
-            const currentPing = data.latencyArr[BLOCKS - 1];
+        let lastState = {
+            isDown: false,
+            ping: 45
+        };
 
+        function refreshModelMetrics(key, currentPing, isDown) {
             const pingEl = document.getElementById(`${key}-ping`);
             const uptimeEl = document.getElementById(`${key}-uptime`);
+            if (!pingEl || !uptimeEl) return;
 
-            // Hitung uptime: hanya merah (0) yang mengurangi uptime
-            const healthyCount = data.statusArr.filter(s => s > 0).length;
-            const uptime = Math.round((healthyCount / BLOCKS) * 100);
-            uptimeEl.innerText = `${uptime}%`;
-            uptimeEl.style.color = uptime >= 90 ? 'var(--success)' : (uptime >= 70 ? 'var(--warning)' : 'var(--error)');
-
-            if (currentStatus === 0) {
+            if (isDown) {
                 pingEl.innerText = 'DOWN';
                 pingEl.style.color = 'var(--error)';
-            } else if (currentStatus === 1) {
-                pingEl.innerText = `${currentPing}ms`;
-                pingEl.style.color = 'var(--warning)';
+                uptimeEl.innerText = '0%';
+                uptimeEl.style.color = 'var(--error)';
             } else {
                 pingEl.innerText = `${currentPing}ms`;
-                pingEl.style.color = '#1f2937';
+                if (currentPing <= 200) {
+                    pingEl.style.color = 'var(--text-main)';
+                    uptimeEl.innerText = '100%';
+                    uptimeEl.style.color = 'var(--success)';
+                } else if (currentPing <= 350) {
+                    pingEl.style.color = 'var(--warning)';
+                    uptimeEl.innerText = '99%';
+                    uptimeEl.style.color = 'var(--success)';
+                } else if (currentPing <= 600) {
+                    pingEl.style.color = 'var(--warning)';
+                    uptimeEl.innerText = '95%';
+                    uptimeEl.style.color = 'var(--warning)';
+                } else {
+                    pingEl.style.color = 'var(--error)';
+                    uptimeEl.innerText = '80%';
+                    uptimeEl.style.color = 'var(--error)';
+                }
             }
         }
 
@@ -393,7 +459,26 @@
             }
         }
 
-        // Fungsi Ping Nyata ke API Proxy (/v1/models)
+        function renderCurrentState() {
+            const { isDown, ping } = lastState;
+
+            const modelOffsets = {
+                m1: 0,
+                xcode: 5,
+                image: 12,
+                audio: 7
+            };
+
+            models.forEach(m => {
+                const modelPing = isDown ? 0 : Math.max(15, ping + (modelOffsets[m] || 0));
+                const bars = calculateSignalBars(modelPing, isDown);
+                renderBlocks(canvases[m], bars);
+                refreshModelMetrics(m, modelPing, isDown);
+            });
+
+            updateSystemBadge(isDown, !isDown && ping > 350);
+        }
+
         async function checkApiHealth() {
             const startTime = performance.now();
             let isDown = false;
@@ -410,55 +495,20 @@
                 isDown = true;
             }
 
-            // Tentukan status berdasarkan hasil nyata:
-            // Hanya MERAH jika benar-benar down (fetch gagal atau error 500)
-            // KUNING jika ping tinggi (> 350ms)
-            // HIJAU jika lancar
-            ['m1', 'xcode', 'image'].forEach(key => {
-                const data = modelsData[key];
-                let modelStatus = 2; // Default normal hijau
-                let modelPing = latency;
+            lastState.isDown = isDown;
+            lastState.ping = latency;
 
-                if (isDown) {
-                    modelStatus = 0; // HANYA MERAH JIKA BENAR-BENAR DOWN
-                    modelPing = 0;
-                } else if (modelPing > 350) {
-                    modelStatus = 1; // KUNING JIKA PING TINGGI
-                } else {
-                    modelStatus = 2; // HIJAU
-                }
-
-                // Geser bar status
-                data.statusArr.shift();
-                data.statusArr.push(modelStatus);
-
-                data.latencyArr.shift();
-                data.latencyArr.push(modelPing);
-
-                if (key === 'm1') renderBlocks(cM1, data.statusArr);
-                if (key === 'xcode') renderBlocks(cXcode, data.statusArr);
-                if (key === 'image') renderBlocks(cImage, data.statusArr);
-
-                refreshMetrics(key);
-            });
-
-            const anyDown = isDown;
-            const anySlow = !isDown && latency > 350;
-            updateSystemBadge(anyDown, anySlow);
+            renderCurrentState();
 
             totalRequests += Math.floor(1 + Math.random() * 3);
-            document.getElementById('req-counter').innerText = totalRequests.toLocaleString('id-ID');
+            const counterEl = document.getElementById('req-counter');
+            if (counterEl) counterEl.innerText = totalRequests.toLocaleString('id-ID');
         }
 
         // Render awal
-        renderBlocks(cM1, modelsData.m1.statusArr);
-        renderBlocks(cXcode, modelsData.xcode.statusArr);
-        renderBlocks(cImage, modelsData.image.statusArr);
-        refreshMetrics('m1');
-        refreshMetrics('xcode');
-        refreshMetrics('image');
+        renderCurrentState();
 
-        // Jalankan ping pertama langsung, lalu ulangi tiap 3 detik
+        // Jalankan ping pertama langsung, lalu ulangi berkala tiap 3 detik
         checkApiHealth();
         setInterval(checkApiHealth, 3000);
     </script>
