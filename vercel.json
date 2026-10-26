@@ -1,5 +1,6 @@
 {
   "routes": [
+    { "src": "/studio", "dest": "/studio.html" },
     { "src": "/v1/chat/completions", "dest": "/api/v1/chat/completions.js" },
     { "src": "/v1/completions", "dest": "/api/v1/completions.js" },
     { "src": "/v1/messages", "dest": "/api/v1/messages.js" },
