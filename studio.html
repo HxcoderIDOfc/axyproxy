@@ -1218,7 +1218,7 @@
     <div class="header-actions">
       <div class="api-key-pill" onclick="openKeyModal()" title="Klik untuk mengganti API Key aktif">
         <span class="key-indicator"></span>
-        <span class="key-text" id="headerKeyLabel">axy-key-tes123</span>
+        <span class="key-text" id="headerKeyLabel">axy-live-sandbox</span>
       </div>
       <button class="btn-buy-cta" onclick="switchTab('buy')">
         ⚡ Beli Saldo
@@ -1291,7 +1291,7 @@
 
           <!-- Active Key Notice -->
           <div style="margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border-subtle); font-size: 0.75rem; color: var(--text-faint);">
-            🔑 Key aktif: <span id="sidebarKeyDisplay" style="color: var(--accent-emerald); font-family: var(--font-mono);">axy-key-tes123</span>
+            🔑 Key aktif: <span id="sidebarKeyDisplay" style="color: var(--accent-emerald); font-family: var(--font-mono);">axy-live-sandbox</span>
           </div>
         </aside>
 
@@ -1467,7 +1467,7 @@
         </div>
         
         <p style="color: var(--text-muted); font-size: 0.875rem;">
-          Masukkan API Key Anda (contoh: <code>axy-live-...</code> atau <code>axy-key-tes123</code>) untuk melihat status keaktifan, kuota, dan izin akses.
+          Masukkan API Key Anda (contoh: <code>axy-live-xxxxxxxx</code>) untuk melihat status keaktifan, kuota, dan izin akses.
         </p>
 
         <div style="display: flex; gap: 10px;">
@@ -1508,7 +1508,7 @@ from openai import OpenAI
 
 client = OpenAI(
     base_url="https://api.axynera.my.id/v1",
-    api_key="axy-key-tes123" # atau API Key QRIS kamu
+    api_key="axy-live-your-key-here"
 )
 
 response = client.chat.completions.create(
@@ -1531,7 +1531,7 @@ const res = await fetch("https://api.axynera.my.id/v1/chat/completions", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
-    "Authorization": "Bearer axy-key-tes123"
+    "Authorization": "Bearer axy-live-your-key-here"
   },
   body: JSON.stringify({
     model: "Axynity-M1",
@@ -1553,7 +1553,7 @@ console.log(data.choices[0].message.content);</pre>
             <pre style="background: #090d16; padding: 14px; border-radius: 8px; border: 1px solid var(--border-subtle); overflow-x: auto; font-family: var(--font-mono); font-size: 0.8125rem; color: #f8fafc;">
 curl -X POST https://api.axynera.my.id/v1/images/generations \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer axy-key-tes123" \
+  -H "Authorization: Bearer axy-live-your-key-here" \
   -d '{
     "model": "Axynity-Image",
     "prompt": "futuristic flying car in cyberpunk city, 8k render",
@@ -1583,7 +1583,7 @@ async function askAxynity(prompt, imageBase64 = null) {
     model: "Axynity-M1",
     messages: [{ role: "user", content }]
   }, {
-    headers: { "Authorization": "Bearer axy-key-tes123" }
+    headers: { "Authorization": "Bearer axy-live-your-key-here" }
   });
 
   return res.data.choices[0].message.content;
@@ -1706,7 +1706,7 @@ async function askAxynity(prompt, imageBase64 = null) {
       <h3 style="font-size: 1.125rem; font-weight: 800; margin-bottom: 8px;">Ganti API Key Aktif</h3>
       <p style="color: var(--text-muted); font-size: 0.8125rem; margin-bottom: 16px;">Key ini akan digunakan pada seluruh pengujian di Playground.</p>
       
-      <input type="text" id="manualKeyInput" class="input-custom" placeholder="axy-live-... atau axy-key-tes123" style="margin-bottom: 16px;">
+      <input type="text" id="manualKeyInput" class="input-custom" placeholder="axy-live-xxxxxxxx" style="margin-bottom: 16px;">
       
       <div style="display: flex; gap: 10px; justify-content: flex-end;">
         <button class="btn-secondary" onclick="closeKeyModal()">Batal</button>
@@ -1744,7 +1744,13 @@ async function askAxynity(prompt, imageBase64 = null) {
   <!-- SCRIPT LOGIC -->
   <script>
     // State Aplikasi
-    let currentActiveKey = localStorage.getItem("axy_active_key") || "axy-key-tes123";
+    const DEMO_SANDBOX_KEY = "axy-live-sandbox";
+    let storedKey = localStorage.getItem("axy_active_key");
+    if (storedKey && (storedKey.includes("tes123") || storedKey === "axy-live-sandbox")) {
+      localStorage.removeItem("axy_active_key");
+      storedKey = null;
+    }
+    let currentActiveKey = storedKey || DEMO_SANDBOX_KEY;
     let playgroundMode = "chat"; // "chat" | "image"
     let attachedImageBase64 = null;
     let chatHistory = [];
@@ -1773,9 +1779,12 @@ async function askAxynity(prompt, imageBase64 = null) {
 
     // Update Label Key di UI
     function updateKeyUI() {
-      const masked = currentActiveKey.length > 18 
-        ? currentActiveKey.substring(0, 10) + "..." + currentActiveKey.slice(-4)
-        : currentActiveKey;
+      let masked = currentActiveKey;
+      if (currentActiveKey === DEMO_SANDBOX_KEY || currentActiveKey.includes("tes123")) {
+        masked = "axy-live-sandbox";
+      } else if (currentActiveKey.length > 18) {
+        masked = currentActiveKey.substring(0, 10) + "..." + currentActiveKey.slice(-4);
+      }
       document.getElementById("headerKeyLabel").innerText = masked;
       document.getElementById("sidebarKeyDisplay").innerText = masked;
     }
@@ -2308,7 +2317,9 @@ async function askAxynity(prompt, imageBase64 = null) {
     function renderActiveSnippet() {
       const model = document.getElementById("modelSelect").value;
       const box = document.getElementById("codeSnippetBox");
-      const key = currentActiveKey;
+      const key = (currentActiveKey === DEMO_SANDBOX_KEY || currentActiveKey.includes("tes123")) 
+        ? "axy-live-your-key-here" 
+        : currentActiveKey;
 
       if (activeSnippetLang === "curl") {
         box.innerText = `curl -X POST https://api.axynera.my.id/v1/chat/completions \\

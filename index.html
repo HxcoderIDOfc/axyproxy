@@ -869,7 +869,7 @@
             <div class="output-screen" id="outputScreen">Simpan API key di environment variable (process.env atau .env) dan jangan pernah membagikannya ke client-side JavaScript publik. Gunakan proxy server untuk meneruskan request.</div>
 
             <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); font-family: var(--font-mono);">
-              <span>auth: Bearer axy-key-tes123</span>
+              <span>auth: Active Sandbox Session</span>
               <span id="tokenCount">tokens: 42</span>
             </div>
           </div>
@@ -972,7 +972,7 @@
         <div style="font-weight: 700; font-size: 15px; margin-bottom: 4px;">Cek Status API Key</div>
         <div style="color: var(--text-dim); font-size: 13px;">Masukkan API key kamu untuk mengecek izin dan status keaktifan di server edge.</div>
         <div class="verifier-row">
-          <input type="text" id="keyInput" class="verifier-input" placeholder="axy-live-xxxxxxxx atau axy-key-tes123">
+          <input type="text" id="keyInput" class="verifier-input" placeholder="axy-live-xxxxxxxx">
           <button class="btn btn-dark" onclick="verifyKey()">Periksa Key</button>
         </div>
         <div id="keyFeedback" style="display: none; font-size: 13px; margin-top: 10px; font-family: var(--font-mono);"></div>
@@ -1143,11 +1143,12 @@ async function tanyaAI(promptTeks, imageBase64 = null) {
 
       const t0 = performance.now();
       try {
+        const demoToken = "axy-live-sandbox";
         const res = await fetch("/v1/chat/completions", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": "Bearer axy-key-tes123"
+            "Authorization": `Bearer ${localStorage.getItem("axy_api_key") || demoToken}`
           },
           body: JSON.stringify({
             model: model,
