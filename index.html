@@ -2,55 +2,68 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Axynera Gateway — API AI Tanpa Kartu Kredit</title>
   <meta name="description" content="Proxy API model AI kompatibel OpenAI. Beli saldo pakai QRIS mulai Rp 5.000, potong per pemakaian tanpa sistem hangus bulanan.">
   <link rel="icon" type="image/jpeg" href="/logo.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
   <style>
     :root {
-      --bg: #ffffff;
-      --bg-subtle: #f8fafc;
+      --bg: #f8fafc;
       --surface: #ffffff;
+      --surface-subtle: #f1f5f9;
       --border: #e2e8f0;
-      --border-dark: #cbd5e1;
+      --border-hover: #cbd5e1;
       
-      --text: #0f172a;
+      --text-main: #0f172a;
       --text-muted: #475569;
       --text-dim: #64748b;
       
       --brand: #0f172a;
-      --brand-accent: #2563eb;
-      --green: #059669;
+      --brand-hover: #1e293b;
+      --blue: #2563eb;
+      --blue-bg: #eff6ff;
+      --emerald: #059669;
+      --emerald-bg: #ecfdf5;
       --amber: #d97706;
 
-      --font: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      --mono: 'JetBrains Mono', monospace;
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
 
-      --radius: 6px;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 20px;
+      
+      --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.02);
+      --shadow-hover: 0 10px 20px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
+      -webkit-tap-highlight-color: transparent;
     }
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font);
-      font-size: 14px;
+    html, body {
+      width: 100%;
+      min-height: 100%;
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      font-size: 15px;
       line-height: 1.6;
       -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
     }
 
     a {
-      color: var(--brand-accent);
+      color: var(--blue);
       text-decoration: none;
     }
 
@@ -58,731 +71,976 @@
       text-decoration: underline;
     }
 
-    /* Top Utility Bar */
-    .top-bar {
-      border-bottom: 1px solid var(--border);
-      background: #ffffff;
-      position: sticky;
-      top: 0;
-      z-index: 40;
-    }
-
-    .top-inner {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 12px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-    }
-
-    .brand-wrap {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      color: var(--text);
-      font-weight: 700;
-      font-size: 15px;
-      text-decoration: none;
-    }
-
-    .brand-wrap img {
-      width: 24px;
-      height: 24px;
-      border-radius: 4px;
-      object-fit: cover;
-    }
-
-    .status-tag {
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--green);
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: #ecfdf5;
-      padding: 3px 8px;
-      border-radius: 4px;
-      border: 1px solid #a7f3d0;
-    }
-
-    .top-links {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      font-size: 13px;
-    }
-
-    .top-links a {
-      color: var(--text-muted);
-      text-decoration: none;
-    }
-
-    .top-links a:hover {
-      color: var(--text);
-    }
-
-    /* Main Container */
+    /* Container */
     .container {
-      max-width: 1100px;
+      width: 100%;
+      max-width: 1060px;
       margin: 0 auto;
-      padding: 40px 20px 80px;
+      padding: 0 20px;
     }
 
-    /* Hero: Asymmetric Two-Column Utility */
-    .hero-grid {
-      display: grid;
-      grid-template-columns: 1.15fr 1fr;
-      gap: 40px;
-      align-items: start;
-      margin-bottom: 60px;
-      padding-bottom: 50px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    @media (max-width: 860px) {
-      .hero-grid {
-        grid-template-columns: 1fr;
-        gap: 30px;
+    @media (max-width: 640px) {
+      .container {
+        padding: 0 16px;
       }
     }
 
-    .hero-left h1 {
-      font-size: 32px;
-      font-weight: 800;
-      line-height: 1.25;
-      letter-spacing: -0.03em;
-      color: #0f172a;
-      margin-bottom: 16px;
+    /* Header Nav */
+    header.header {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
     }
 
-    .hero-left p {
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+    }
+
+    .logo-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text-main);
+    }
+
+    .logo-group img {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      object-fit: cover;
+    }
+
+    .logo-title {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--emerald);
+      background: var(--emerald-bg);
+      border: 1px solid rgba(5, 150, 105, 0.2);
+      padding: 3px 8px;
+      border-radius: 999px;
+    }
+
+    .pulse {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--emerald);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Standard Buttons */
+    .btn {
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 9px 16px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      text-decoration: none;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      min-height: 42px;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-dark {
+      background: var(--brand);
+      color: #ffffff;
+      border: 1px solid var(--brand);
+    }
+
+    .btn-dark:hover {
+      background: var(--brand-hover);
+      text-decoration: none;
+    }
+
+    .btn-light {
+      background: #ffffff;
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    .btn-light:hover {
+      background: var(--surface-subtle);
+      border-color: var(--border-hover);
+      text-decoration: none;
+    }
+
+    .btn-blue {
+      background: var(--blue);
+      color: #ffffff;
+      border: 1px solid var(--blue);
+    }
+
+    .btn-blue:hover {
+      background: #1d4ed8;
+      text-decoration: none;
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 44px 0 32px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 28px;
+      align-items: stretch;
+    }
+
+    @media (max-width: 900px) {
+      .hero-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+    }
+
+    .hero-lead-box {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .tag-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--blue);
+      background: var(--blue-bg);
+      border: 1px solid rgba(37, 99, 235, 0.18);
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 16px;
+      align-self: flex-start;
+    }
+
+    .hero-heading {
+      font-size: 34px;
+      font-weight: 800;
+      line-height: 1.22;
+      letter-spacing: -0.035em;
+      color: var(--text-main);
+      margin-bottom: 14px;
+    }
+
+    @media (max-width: 640px) {
+      .hero-heading {
+        font-size: 25px;
+      }
+    }
+
+    .hero-desc {
       font-size: 15px;
       color: var(--text-muted);
       line-height: 1.6;
       margin-bottom: 24px;
     }
 
-    .quick-checkout-card {
-      background: var(--bg-subtle);
+    /* Checkout Card in Hero */
+    .checkout-card {
+      background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px;
-      margin-bottom: 24px;
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
     }
 
-    .quick-checkout-title {
-      font-size: 13px;
-      font-weight: 700;
+    .checkout-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+
+    .checkout-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text-main);
       text-transform: uppercase;
       letter-spacing: 0.04em;
-      color: var(--text-dim);
-      margin-bottom: 12px;
     }
 
-    .preset-chips {
-      display: flex;
+    .chips-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
       gap: 8px;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
     }
 
-    .chip-btn {
+    @media (max-width: 440px) {
+      .chips-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .chip {
       background: #ffffff;
       border: 1px solid var(--border);
-      color: var(--text);
-      font-family: var(--mono);
-      font-size: 12px;
-      font-weight: 600;
-      padding: 6px 12px;
-      border-radius: var(--radius);
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      padding: 8px 4px;
+      text-align: center;
+      border-radius: var(--radius-sm);
       cursor: pointer;
-      transition: all 0.15s;
+      transition: all 0.15s ease;
     }
 
-    .chip-btn:hover, .chip-btn.active {
-      border-color: var(--brand-accent);
-      color: var(--brand-accent);
-      background: #eff6ff;
+    .chip:hover, .chip.active {
+      background: var(--blue-bg);
+      border-color: var(--blue);
+      color: var(--blue);
     }
 
-    .checkout-input-row {
+    .input-row {
       display: flex;
-      gap: 10px;
+      flex-direction: column;
+      gap: 8px;
     }
 
-    .input-field {
-      flex: 1;
-      background: #ffffff;
-      border: 1px solid var(--border-dark);
-      padding: 8px 12px;
-      font-family: var(--mono);
-      font-size: 14px;
-      border-radius: var(--radius);
-      outline: none;
-    }
-
-    .input-field:focus {
-      border-color: var(--brand-accent);
-    }
-
-    .btn-action {
-      background: var(--brand);
-      color: #ffffff;
-      border: 1px solid var(--brand);
-      padding: 8px 16px;
-      font-size: 13px;
-      font-weight: 600;
-      border-radius: var(--radius);
-      cursor: pointer;
-      white-space: nowrap;
-      transition: background 0.15s;
-    }
-
-    .btn-action:hover {
-      background: #334155;
-    }
-
-    .btn-outline {
-      background: #ffffff;
-      color: var(--text);
-      border: 1px solid var(--border-dark);
-      padding: 8px 16px;
-      font-size: 13px;
-      font-weight: 600;
-      border-radius: var(--radius);
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-flex;
+    .custom-input-wrap {
+      display: flex;
       align-items: center;
+      background: #ffffff;
+      border: 1px solid var(--border-hover);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      padding: 0 12px;
+      height: 48px;
+    }
+
+    .custom-input-wrap:focus-within {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .input-prefix {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--text-dim);
+      font-size: 15px;
+      padding-right: 8px;
+    }
+
+    .amount-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-family: var(--font-mono);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+      background: transparent;
+      width: 100%;
+    }
+
+    .quota-estimate {
+      font-size: 13px;
+      color: var(--text-muted);
+      background: var(--surface-subtle);
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      line-height: 1.4;
+    }
+
+    .quota-highlight {
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .btn-buy-full {
+      width: 100%;
+      height: 48px;
+      font-size: 15px;
+    }
+
+    .trust-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-dim);
+      flex-wrap: wrap;
       gap: 6px;
     }
 
-    .btn-outline:hover {
-      background: var(--bg-subtle);
-      text-decoration: none;
-    }
-
-    /* Interactive Live Console (Real API Runner) */
-    .live-tester {
-      background: #ffffff;
-      border: 1px solid var(--border-dark);
-      border-radius: var(--radius);
-      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+    /* Live Tester Widget */
+    .tester-widget {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-card);
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
 
-    .tester-head {
-      background: #f1f5f9;
+    .tester-top {
+      background: var(--surface-subtle);
       border-bottom: 1px solid var(--border);
       padding: 10px 14px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      font-family: var(--mono);
+      font-family: var(--font-mono);
       font-size: 12px;
     }
 
-    .tester-body {
+    .tester-content {
       padding: 16px;
       display: flex;
       flex-direction: column;
       gap: 12px;
+      flex: 1;
     }
 
-    .tester-row {
+    .tester-controls {
       display: flex;
       gap: 8px;
+      flex-wrap: wrap;
     }
 
-    .select-model {
+    .select-ctl {
       background: #ffffff;
-      border: 1px solid var(--border-dark);
-      padding: 6px 10px;
-      font-family: var(--mono);
-      font-size: 12px;
-      border-radius: var(--radius);
-      outline: none;
-    }
-
-    .input-prompt {
-      flex: 1;
-      background: #ffffff;
-      border: 1px solid var(--border-dark);
-      padding: 6px 10px;
+      border: 1px solid var(--border-hover);
+      padding: 8px 10px;
+      font-family: var(--font-mono);
       font-size: 13px;
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
       outline: none;
+      min-height: 42px;
     }
 
-    .btn-run {
-      background: var(--brand-accent);
-      color: #ffffff;
-      border: none;
-      padding: 6px 14px;
-      font-size: 12px;
-      font-weight: 600;
-      border-radius: var(--radius);
-      cursor: pointer;
+    .prompt-ctl {
+      flex: 1;
+      min-width: 160px;
+      background: #ffffff;
+      border: 1px solid var(--border-hover);
+      padding: 8px 12px;
+      font-size: 14px;
+      border-radius: var(--radius-sm);
+      outline: none;
+      min-height: 42px;
     }
 
-    .btn-run:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
+    .prompt-ctl:focus {
+      border-color: var(--blue);
     }
 
-    .tester-output {
-      background: #0f172a;
-      color: #f8fafc;
-      font-family: var(--mono);
-      font-size: 12px;
-      line-height: 1.5;
+    .output-screen {
+      background: #090d16;
+      color: #e2e8f0;
+      border-radius: var(--radius-sm);
       padding: 14px;
-      border-radius: var(--radius);
-      min-height: 130px;
-      max-height: 200px;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      line-height: 1.6;
+      min-height: 140px;
+      max-height: 220px;
       overflow-y: auto;
       white-space: pre-wrap;
       word-break: break-word;
+      flex: 1;
     }
 
-    .tester-meta {
-      font-size: 11px;
-      color: var(--text-dim);
-      display: flex;
-      justify-content: space-between;
+    /* Section Headers */
+    .section {
+      padding: 36px 0;
     }
 
-    /* Rate Card & Pricing Table */
-    .section-title {
-      font-size: 18px;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      margin-bottom: 6px;
-    }
-
-    .section-desc {
-      color: var(--text-muted);
-      font-size: 13px;
+    .section-head {
       margin-bottom: 20px;
     }
 
-    .rate-table {
-      width: 100%;
-      border-collapse: collapse;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      margin-bottom: 40px;
+    .section-title {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--text-main);
+      margin-bottom: 4px;
     }
 
-    .rate-table th {
-      background: var(--bg-subtle);
-      padding: 10px 14px;
+    .section-sub {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    /* Model Cards Grid (Responsive Mobile Friendly!) */
+    .model-cards {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 680px) {
+      .model-cards {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .model-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: all 0.2s ease;
+    }
+
+    .model-card:hover {
+      box-shadow: var(--shadow-hover);
+      border-color: var(--border-hover);
+      transform: translateY(-2px);
+    }
+
+    .model-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .model-card-name {
+      font-family: var(--font-mono);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .model-card-price {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--emerald);
+      background: var(--emerald-bg);
+      padding: 2px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .model-card-type {
       font-size: 12px;
-      font-weight: 600;
-      color: var(--text-dim);
+      color: var(--blue);
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.04em;
-      text-align: left;
-      border-bottom: 1px solid var(--border);
     }
 
-    .rate-table td {
-      padding: 12px 14px;
-      font-size: 13px;
-      border-bottom: 1px solid var(--border);
+    .model-card-desc {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.5;
     }
 
-    .rate-table tr:last-child td {
-      border-bottom: none;
-    }
-
-    .rate-table tr:hover td {
-      background: #fbfcfe;
-    }
-
-    .model-code {
-      font-family: var(--mono);
-      font-weight: 600;
-      color: var(--text);
-    }
-
-    /* Integration Snippets */
-    .snippet-box {
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      margin-bottom: 40px;
-    }
-
-    .snippet-tabs {
-      background: var(--bg-subtle);
-      border-bottom: 1px solid var(--border);
-      padding: 6px 12px;
+    .model-card-specs {
       display: flex;
       gap: 6px;
+      flex-wrap: wrap;
+      margin-top: auto;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--text-dim);
     }
 
-    .snippet-tab {
+    /* Code Snippets Container */
+    .snippet-container {
+      background: #090d16;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+    }
+
+    .snippet-tabs-bar {
+      display: flex;
+      background: #111827;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 4px;
+      gap: 4px;
+    }
+
+    .snippet-tab-btn {
       background: transparent;
       border: none;
-      padding: 6px 10px;
-      font-family: var(--mono);
+      color: #94a3b8;
+      font-family: var(--font-mono);
       font-size: 12px;
-      color: var(--text-muted);
-      cursor: pointer;
-      border-radius: 4px;
-    }
-
-    .snippet-tab.active {
-      background: #ffffff;
-      color: var(--text);
       font-weight: 600;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
     }
 
-    .snippet-code {
-      background: #0f172a;
-      color: #f8fafc;
-      padding: 16px;
-      font-family: var(--mono);
-      font-size: 12px;
+    .snippet-tab-btn.active {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+    }
+
+    .snippet-pre {
+      padding: 18px;
+      font-family: var(--font-mono);
+      font-size: 13px;
       line-height: 1.6;
+      color: #f8fafc;
       overflow-x: auto;
       white-space: pre;
     }
 
-    /* QRIS Modal */
-    .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.6);
-      backdrop-filter: blur(4px);
-      z-index: 50;
-      display: none;
-      align-items: center;
-      justify-content: center;
+    /* Key Verifier Box */
+    .verifier-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
       padding: 20px;
+      box-shadow: var(--shadow-card);
     }
 
-    .modal-backdrop.show {
+    .verifier-row {
       display: flex;
-    }
-
-    .modal-card {
-      background: #ffffff;
-      border: 1px solid var(--border-dark);
-      border-radius: var(--radius);
-      max-width: 380px;
-      width: 100%;
-      padding: 24px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-      position: relative;
-    }
-
-    .modal-close {
-      position: absolute;
-      top: 14px;
-      right: 14px;
-      background: transparent;
-      border: none;
-      font-size: 18px;
-      cursor: pointer;
-      color: var(--text-dim);
-    }
-
-    .qris-box {
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 14px;
-      text-align: center;
-      margin: 16px 0;
-      background: #fafafa;
-    }
-
-    .qris-box img {
-      width: 200px;
-      height: 200px;
-      object-fit: contain;
-      margin: 0 auto;
-      display: block;
-      background: #fff;
-      padding: 6px;
-      border: 1px solid var(--border);
-    }
-
-    .qris-total {
-      font-family: var(--mono);
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--text);
+      gap: 10px;
       margin-top: 10px;
     }
 
-    .qris-timer {
-      font-family: var(--mono);
-      font-size: 11px;
-      color: var(--amber);
-      font-weight: 600;
-      margin-bottom: 6px;
+    @media (max-width: 520px) {
+      .verifier-row {
+        flex-direction: column;
+      }
     }
 
-    .key-display {
-      background: #f1f5f9;
-      border: 1px solid #cbd5e1;
-      padding: 10px;
-      border-radius: var(--radius);
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--green);
-      word-break: break-all;
-      margin: 14px 0;
+    .verifier-input {
+      flex: 1;
+      height: 44px;
+      border: 1px solid var(--border-hover);
+      border-radius: var(--radius-sm);
+      padding: 0 12px;
+      font-family: var(--font-mono);
+      font-size: 14px;
+      outline: none;
     }
 
-    /* Key Check Section */
-    .key-check-box {
-      background: var(--bg-subtle);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px;
-      margin-bottom: 40px;
+    .verifier-input:focus {
+      border-color: var(--blue);
     }
 
     /* Footer */
-    footer {
+    footer.footer {
       border-top: 1px solid var(--border);
-      padding: 24px 20px;
-      font-size: 12px;
+      padding: 30px 0;
+      font-size: 13px;
       color: var(--text-dim);
+      background: #ffffff;
+      margin-top: 40px;
     }
 
-    .footer-inner {
-      max-width: 1100px;
-      margin: 0 auto;
+    .footer-flex {
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      justify-content: space-between;
       flex-wrap: wrap;
       gap: 12px;
+    }
+
+    /* Payment Modal (Mobile Optimized) */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(6px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal-sheet {
+      background: #ffffff;
+      border-radius: var(--radius-xl);
+      max-width: 380px;
+      width: 100%;
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+      position: relative;
+      animation: sheetPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes sheetPop {
+      from { transform: scale(0.95); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-close-x {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: transparent;
+      border: none;
+      font-size: 20px;
+      color: var(--text-dim);
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px;
+    }
+
+    .qris-frame {
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      text-align: center;
+      margin: 16px 0;
+    }
+
+    .qris-frame img {
+      width: 190px;
+      height: 190px;
+      object-fit: contain;
+      margin: 0 auto;
+      display: block;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px;
+    }
+
+    .qris-amount-tag {
+      font-family: var(--font-mono);
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-top: 10px;
+    }
+
+    .key-box-output {
+      background: var(--emerald-bg);
+      border: 1px solid rgba(5, 150, 105, 0.3);
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--emerald);
+      word-break: break-all;
+      margin: 14px 0;
+      text-align: center;
     }
   </style>
 </head>
 <body>
 
-  <!-- Top Bar -->
-  <div class="top-bar">
-    <div class="top-inner">
-      <a href="/" class="brand-wrap">
+  <!-- Header -->
+  <header class="header">
+    <div class="container header-inner">
+      <a href="/" class="logo-group">
         <img src="/logo.jpg" alt="Axynera Logo">
-        <span>Axynera Gateway</span>
+        <span class="logo-title">Axynera</span>
       </a>
 
-      <div class="top-links">
-        <span class="status-tag">● Jakarta Node Online</span>
-        <a href="#rates">Tarif</a>
-        <a href="#quickstart">Quickstart</a>
-        <a href="/studio">Playground Console &rarr;</a>
+      <div class="nav-actions">
+        <div class="status-pill">
+          <span class="pulse"></span>
+          <span>Online</span>
+        </div>
+        <a href="/studio" class="btn btn-light" style="font-size: 13px; padding: 6px 12px;">Console &rarr;</a>
       </div>
     </div>
-  </div>
+  </header>
 
-  <div class="container">
+  <main class="container">
+    
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-grid">
+        
+        <!-- Left: Copy & Checkout Form -->
+        <div class="hero-lead-box">
+          <div class="tag-eyebrow">OPENAI COMPATIBLE &bull; QRIS SETTLEMENT</div>
+          <h1 class="hero-heading">API AI tanpa kartu kredit. Bayar saldo pakai QRIS.</h1>
+          <p class="hero-desc">
+            Bebas dari keharusan kartu kredit luar negeri dan langganan bulanan. Arahkan <code>base_url</code> library OpenAI ke Axynera, bayar saldo via QRIS mulai Rp 5.000, dan gunakan untuk aplikasi backend maupun bot WhatsApp.
+          </p>
 
-    <!-- Hero Section (Left-Aligned, Utility First) -->
-    <div class="hero-grid">
-      <div class="hero-left">
-        <h1>API AI tanpa kartu kredit. Bayar saldo pakai QRIS.</h1>
-        <p>
-          Layanan model AI luar negeri umumnya mengharuskan kartu kredit dan sistem langganan bulanan. Axynera menyediakan endpoint OpenAI-compatible yang bisa diisi saldo mulai Rp 10.000 via QRIS. Kuota dipotong murni per pemakaian dan tidak pernah hangus.
-        </p>
+          <!-- Quick Checkout Form -->
+          <div class="checkout-card">
+            <div class="checkout-header">
+              <span class="checkout-title">Isi Saldo API Key</span>
+              <span style="font-size: 12px; color: var(--emerald); font-weight: 700;">Aktif Permanen</span>
+            </div>
 
-        <!-- Quick Buy Box -->
-        <div class="quick-checkout-card">
-          <div class="quick-checkout-title">Isi Saldo API Key</div>
-          <div class="preset-chips">
-            <button class="chip-btn active" onclick="setPreset(10000, this)">Rp 10.000</button>
-            <button class="chip-btn" onclick="setPreset(25000, this)">Rp 25.000</button>
-            <button class="chip-btn" onclick="setPreset(50000, this)">Rp 50.000</button>
-            <button class="chip-btn" onclick="setPreset(100000, this)">Rp 100.000</button>
+            <!-- Nominal Presets -->
+            <div class="chips-grid">
+              <div class="chip active" onclick="selectChip(10000, this)">10rb</div>
+              <div class="chip" onclick="selectChip(25000, this)">25rb</div>
+              <div class="chip" onclick="selectChip(50000, this)">50rb</div>
+              <div class="chip" onclick="selectChip(100000, this)">100rb</div>
+            </div>
+
+            <div class="input-row">
+              <div class="custom-input-wrap">
+                <span class="input-prefix">Rp</span>
+                <input type="number" id="customAmount" class="amount-input" value="10000" min="5000" step="1000" oninput="updateEstimate()">
+              </div>
+            </div>
+
+            <div class="quota-estimate" id="quotaEstimate">
+              Estimasi: <span class="quota-highlight">~100.000 token</span> chat (Axynity-M1) atau <span class="quota-highlight">50 gambar</span> (Axynity-Image).
+            </div>
+
+            <button class="btn btn-dark btn-buy-full" onclick="startQrisPayment()">
+              Buat Barcode QRIS &rarr;
+            </button>
+
+            <div class="trust-row">
+              <span>BCA &bull; Mandiri &bull; DANA &bull; GoPay &bull; ShopeePay</span>
+              <span>Key aktif instan</span>
+            </div>
           </div>
-          <div class="checkout-input-row">
-            <input type="number" id="nominalInput" class="input-field" value="10000" min="5000" step="1000">
-            <button class="btn-action" onclick="triggerCheckout()">Buat QRIS</button>
+        </div>
+
+        <!-- Right: Live API Tester -->
+        <div class="tester-widget">
+          <div class="tester-top">
+            <span style="font-weight: 700;">POST /v1/chat/completions</span>
+            <span id="testStatus" style="color: var(--emerald);">200 OK &bull; 24ms</span>
           </div>
-          <div style="font-size: 11px; color: var(--text-dim); margin-top: 8px;">
-            Mendukung BCA, Mandiri, BRI, BNI, GoPay, OVO, DANA, ShopeePay. Key aktif instan setelah scan.
+
+          <div class="tester-content">
+            <div class="tester-controls">
+              <select id="modelChoice" class="select-ctl">
+                <option value="Axynity-M1">Axynity-M1 (Flash)</option>
+                <option value="Axynity-Xcode">Axynity-Xcode (Code)</option>
+              </select>
+              <input type="text" id="promptText" class="prompt-ctl" value="Beri tips keamanan saat integrasi API key di backend.">
+              <button class="btn btn-blue" id="btnTest" onclick="sendTestChat()">Kirim</button>
+            </div>
+
+            <div class="output-screen" id="outputScreen">Simpan API key di environment variable (process.env atau .env) dan jangan pernah membagikannya ke client-side JavaScript publik. Gunakan proxy server untuk meneruskan request.</div>
+
+            <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); font-family: var(--font-mono);">
+              <span>auth: Bearer axy-key-tes123</span>
+              <span id="tokenCount">tokens: 42</span>
+            </div>
           </div>
         </div>
 
-        <div style="display: flex; gap: 10px; align-items: center;">
-          <a href="/studio" class="btn-outline">Buka Interactive Studio &rarr;</a>
-          <span style="font-size: 12px; color: var(--text-dim);">atau coba request langsung di sebelah kanan.</span>
-        </div>
+      </div>
+    </section>
+
+    <!-- Model Spec Cards (Responsive Grid) -->
+    <section class="section">
+      <div class="section-head">
+        <h2 class="section-title">Katalog Model & Tarif Satuan</h2>
+        <p class="section-sub">Saldo dipotong sesuai penggunaan aktual per request. Tidak ada kuota hangus.</p>
       </div>
 
-      <!-- Live API Tester (Real functional widget) -->
-      <div class="live-tester">
-        <div class="tester-head">
-          <span>POST /v1/chat/completions</span>
-          <span id="testLatency" style="color: var(--green);">Ready</span>
-        </div>
-        <div class="tester-body">
-          <div class="tester-row">
-            <select id="testModel" class="select-model">
-              <option value="Axynity-M1">Axynity-M1 (Flash)</option>
-              <option value="Axynity-Xcode">Axynity-Xcode (Code)</option>
-            </select>
-            <input type="text" id="testPrompt" class="input-prompt" value="Tuliskan ringkasan 1 kalimat tentang enkripsi asimetris.">
-            <button class="btn-run" id="btnTestRun" onclick="runLiveTest()">Kirim</button>
+      <div class="model-cards">
+        <!-- Card 1 -->
+        <div class="model-card">
+          <div class="model-card-top">
+            <span class="model-card-name">Axynity-M1</span>
+            <span class="model-card-price">Rp 0,15 / 1k token</span>
           </div>
-
-          <div class="tester-output" id="testOutput">// Klik 'Kirim' untuk menguji respon API secara langsung.
-// Request ini menggunakan endpoint produksi api.axynera.my.id.</div>
-
-          <div class="tester-meta">
-            <span>Auth: Bearer axy-key-tes123</span>
-            <span id="testTokens">tokens: -</span>
+          <div class="model-card-type">Chat & Vision Multimodal</div>
+          <p class="model-card-desc">
+            Model berlatensi terendah untuk chat interaktif, asisten WhatsApp otomatis, serta analisa foto, tangkapan layar, dan dokumen OCR.
+          </p>
+          <div class="model-card-specs">
+            <span>128k context</span> &bull; <span>latensi &lt; 28ms</span> &bull; <span>vision enabled</span>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Rate Card Table -->
-    <div id="rates">
-      <div class="section-title">Tarif & Model</div>
-      <div class="section-desc">Biaya dipotong dari saldo berdasarkan konsumsi aktual token atau render gambar.</div>
-
-      <table class="rate-table">
-        <thead>
-          <tr>
-            <th>Model</th>
-            <th>Tipe Layanan</th>
-            <th>Tarif Per Satuan</th>
-            <th>Context Window</th>
-            <th>Catatan</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><span class="model-code">Axynity-M1</span></td>
-            <td>Chat & Multimodal Vision</td>
-            <td>Rp 0,15 / 1.000 token</td>
-            <td>128.000 token</td>
-            <td>Latensi &lt; 30ms, support baca gambar/dokumen</td>
-          </tr>
-          <tr>
-            <td><span class="model-code">Axynity-Xcode</span></td>
-            <td>Penalaran & Coding</td>
-            <td>Rp 0,40 / 1.000 token</td>
-            <td>128.000 token</td>
-            <td>Optimasi analisis algoritma & bug program</td>
-          </tr>
-          <tr>
-            <td><span class="model-code">Axynity-Image</span></td>
-            <td>Text-to-Image Diffusion</td>
-            <td>Rp 200 / gambar</td>
-            <td>Prompt teks</td>
-            <td>Resolusi 1024x1024 render langsung</td>
-          </tr>
-          <tr>
-            <td><span class="model-code">Axynity-Audio</span></td>
-            <td>Transkripsi Whisper</td>
-            <td>Rp 50 / menit audio</td>
-            <td>File s/d 25MB</td>
-            <td>Konversi rekaman suara WhatsApp ke teks</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Quickstart Section -->
-    <div id="quickstart">
-      <div class="section-title">Cara Menggunakan</div>
-      <div class="section-desc">Ganti baseURL di library standar OpenAI ke endpoint Axynera.</div>
-
-      <div class="snippet-box">
-        <div class="snippet-tabs">
-          <button class="snippet-tab active" onclick="switchLang('py', this)">Python</button>
-          <button class="snippet-tab" onclick="switchLang('js', this)">Node.js</button>
-          <button class="snippet-tab" onclick="switchLang('curl', this)">cURL</button>
-          <button class="snippet-tab" onclick="switchLang('baileys', this)">WhatsApp Baileys</button>
+        <!-- Card 2 -->
+        <div class="model-card">
+          <div class="model-card-top">
+            <span class="model-card-name">Axynity-Xcode</span>
+            <span class="model-card-price">Rp 0,40 / 1k token</span>
+          </div>
+          <div class="model-card-type">Penalaran & Logika Kode</div>
+          <p class="model-card-desc">
+            Dikhususkan untuk sintesis kode pemrograman, penyelesaian bug rumit, arsitektur software, dan komputasi logika mendalam.
+          </p>
+          <div class="model-card-specs">
+            <span>128k context</span> &bull; <span>deep reasoning</span> &bull; <span>code refactor</span>
+          </div>
         </div>
-        <div class="snippet-code" id="snippetContent"></div>
-      </div>
-    </div>
 
-    <!-- Cek Saldo & Validasi Key -->
-    <div class="key-check-box">
-      <div style="font-weight: 700; margin-bottom: 6px;">Cek Status API Key</div>
-      <div style="color: var(--text-dim); font-size: 12px; margin-bottom: 12px;">Masukkan API Key kamu (axy-live-... atau axy-key-tes123) untuk mengecek izin dan status.</div>
-      <div style="display: flex; gap: 8px;">
-        <input type="text" id="verifyKeyInput" class="input-field" placeholder="Tempel API Key di sini...">
-        <button class="btn-outline" onclick="checkKeyStatus()">Periksa</button>
-      </div>
-      <div id="verifyResult" style="display: none; font-size: 12px; margin-top: 10px; font-family: var(--mono);"></div>
-    </div>
+        <!-- Card 3 -->
+        <div class="model-card">
+          <div class="model-card-top">
+            <span class="model-card-name">Axynity-Image</span>
+            <span class="model-card-price">Rp 200 / gambar</span>
+          </div>
+          <div class="model-card-type">Text-to-Image Diffusion</div>
+          <p class="model-card-desc">
+            Hasilkan visual dan ilustrasi 1024x1024 beresolusi tinggi langsung dari instruksi teks. Cocok untuk stiker bot dan aset kreatif.
+          </p>
+          <div class="model-card-specs">
+            <span>1024x1024 HD</span> &bull; <span>~3.8s render</span> &bull; <span>diffusion</span>
+          </div>
+        </div>
 
-  </div>
+        <!-- Card 4 -->
+        <div class="model-card">
+          <div class="model-card-top">
+            <span class="model-card-name">Axynity-Audio</span>
+            <span class="model-card-price">Rp 50 / menit</span>
+          </div>
+          <div class="model-card-type">Whisper Speech-to-Text</div>
+          <p class="model-card-desc">
+            Transkripsi file audio dan rekaman suara WhatsApp ke teks akurat dengan pemahaman aksen Indonesia.
+          </p>
+          <div class="model-card-specs">
+            <span>max 25MB</span> &bull; <span>whisper v3</span> &bull; <span>multi-bahasa</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quickstart Code -->
+    <section class="section">
+      <div class="section-head">
+        <h2 class="section-title">Integrasi Kode</h2>
+        <p class="section-sub">Gunakan SDK resmi OpenAI dengan mengubah baseURL ke Axynera.</p>
+      </div>
+
+      <div class="snippet-container">
+        <div class="snippet-tabs-bar">
+          <button class="snippet-tab-btn active" onclick="setSnippet('python', this)">Python</button>
+          <button class="snippet-tab-btn" onclick="setSnippet('node', this)">Node.js</button>
+          <button class="snippet-tab-btn" onclick="setSnippet('curl', this)">cURL</button>
+          <button class="snippet-tab-btn" onclick="setSnippet('baileys', this)">WhatsApp Baileys</button>
+        </div>
+        <pre class="snippet-pre" id="snippetPre"></pre>
+      </div>
+    </section>
+
+    <!-- Key Verifier -->
+    <section class="section">
+      <div class="verifier-card">
+        <div style="font-weight: 700; font-size: 15px; margin-bottom: 4px;">Cek Status API Key</div>
+        <div style="color: var(--text-dim); font-size: 13px;">Masukkan API key kamu untuk mengecek izin dan status keaktifan di server edge.</div>
+        <div class="verifier-row">
+          <input type="text" id="keyInput" class="verifier-input" placeholder="axy-live-xxxxxxxx atau axy-key-tes123">
+          <button class="btn btn-dark" onclick="verifyKey()">Periksa Key</button>
+        </div>
+        <div id="keyFeedback" style="display: none; font-size: 13px; margin-top: 10px; font-family: var(--font-mono);"></div>
+      </div>
+    </section>
+
+  </main>
 
   <!-- Footer -->
-  <footer>
-    <div class="footer-inner">
+  <footer class="footer">
+    <div class="container footer-flex">
       <div>Axynera Gateway &bull; Dibuat untuk pengembang Indonesia &copy; 2026.</div>
       <div style="display: flex; gap: 16px;">
         <a href="/studio">Playground Console</a>
-        <a href="/v1/models" target="_blank">Health Check</a>
+        <a href="/v1/models" target="_blank">Health Status</a>
       </div>
     </div>
   </footer>
 
   <!-- QRIS Payment Modal -->
-  <div class="modal-backdrop" id="qrisModal">
-    <div class="modal-card">
-      <button class="modal-close" onclick="closeModal()">&times;</button>
+  <div class="modal-overlay" id="qrisModal">
+    <div class="modal-sheet">
+      <button class="modal-close-x" onclick="closePaymentModal()">&times;</button>
 
-      <div id="stagePending">
-        <div style="font-size: 13px; font-weight: 700; margin-bottom: 2px;">Pembayaran QRIS</div>
-        <div style="font-size: 12px; color: var(--text-dim);">Scan menggunakan m-Banking atau e-Wallet apa saja.</div>
+      <div id="viewWaiting">
+        <div style="font-size: 14px; font-weight: 800; margin-bottom: 2px;">Pembayaran QRIS</div>
+        <div style="font-size: 12px; color: var(--text-dim);">Scan menggunakan BCA, Mandiri, DANA, GoPay, OVO, ShopeePay.</div>
 
-        <div class="qris-box">
-          <div class="qris-timer">BATAS WAKTU: <span id="timerText">15:00</span></div>
-          <img id="qrisImg" src="" alt="Barcode QRIS">
-          <div class="qris-total" id="amountDisplay">Rp 10.000</div>
-          <div style="font-family: var(--mono); font-size: 11px; color: var(--text-dim);" id="trxIdDisplay">-</div>
+        <div class="qris-frame">
+          <div style="font-family: var(--font-mono); font-size: 12px; color: var(--amber); font-weight: 700; margin-bottom: 6px;">
+            BERLAKU: <span id="countdown">15:00</span>
+          </div>
+          <img id="qrImage" src="" alt="Scan QRIS">
+          <div class="qris-amount-tag" id="qrisTotal">Rp 10.000</div>
+          <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); margin-top: 4px;" id="qrisTrxId">-</div>
         </div>
 
-        <div style="font-size: 11px; color: var(--text-dim); text-align: center; margin-bottom: 12px;">
-          Sistem mengecek status otomatis setiap 3 detik.
+        <div style="font-size: 12px; color: var(--text-dim); text-align: center; margin-bottom: 12px;">
+          Sistem mendeteksi pembayaran secara otomatis.
         </div>
 
-        <button class="btn-action" style="width: 100%;" onclick="manualCheckPayment()">Cek Pembayaran Sekarang</button>
+        <button class="btn btn-dark" style="width: 100%;" onclick="forceCheckPayment()">
+          Cek Status Pembayaran
+        </button>
       </div>
 
-      <div id="stageSuccess" style="display: none; text-align: center;">
-        <div style="font-size: 28px; color: var(--green); margin-bottom: 6px;">&check;</div>
-        <div style="font-weight: 700; font-size: 15px; margin-bottom: 4px;">Pembayaran Terkonfirmasi</div>
-        <div style="font-size: 12px; color: var(--text-dim);">API Key Anda telah diterbitkan dan langsung aktif:</div>
+      <div id="viewSuccess" style="display: none; text-align: center;">
+        <div style="font-size: 32px; color: var(--emerald); margin-bottom: 4px;">&check;</div>
+        <div style="font-size: 16px; font-weight: 800; margin-bottom: 4px;">Pembayaran Terverifikasi</div>
+        <div style="font-size: 13px; color: var(--text-dim);">API Key Anda telah diterbitkan dan langsung aktif:</div>
 
-        <div class="key-display" id="newKeyText">axy-live-xxxxxxxx</div>
+        <div class="key-box-output" id="outputKeyText">axy-live-xxxxxxxx</div>
 
-        <button class="btn-action" style="width: 100%; margin-bottom: 8px;" onclick="copyKey()">Salin API Key</button>
-        <a href="/studio" class="btn-outline" style="width: 100%; justify-content: center;">Buka di Playground Studio</a>
+        <button class="btn btn-dark" style="width: 100%; margin-bottom: 8px;" onclick="copyGeneratedKey()">Salin API Key</button>
+        <a href="/studio" class="btn btn-light" style="width: 100%; justify-content: center;">Buka di Playground Studio &rarr;</a>
       </div>
     </div>
   </div>
 
   <script>
-    let activeTrx = null;
-    let pollInterval = null;
-    let timerInterval = null;
-    let createdKey = null;
+    let activeTrxId = null;
+    let pollHandle = null;
+    let timerHandle = null;
+    let resultingKey = null;
 
-    const snippets = {
-      py: `from openai import OpenAI
+    const codePresets = {
+      python: `from openai import OpenAI
 
-# Arahkan base_url ke Axynera
 client = OpenAI(
     base_url="https://api.axynera.my.id/v1",
     api_key="axy-live-your-key"
@@ -795,7 +1053,7 @@ res = client.chat.completions.create(
 
 print(res.choices[0].message.content)`,
 
-      js: `import OpenAI from "openai";
+      node: `import OpenAI from "openai";
 
 const client = new OpenAI({
   baseURL: "https://api.axynera.my.id/v1",
@@ -842,36 +1100,46 @@ async function tanyaAI(promptTeks, imageBase64 = null) {
     };
 
     document.addEventListener("DOMContentLoaded", () => {
-      document.getElementById("snippetContent").textContent = snippets.py;
+      document.getElementById("snippetPre").textContent = codePresets.python;
+      updateEstimate();
     });
 
-    function setPreset(val, btn) {
-      document.querySelectorAll(".chip-btn").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      document.getElementById("nominalInput").value = val;
+    function selectChip(val, el) {
+      document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
+      el.classList.add("active");
+      document.getElementById("customAmount").value = val;
+      updateEstimate();
     }
 
-    function switchLang(lang, btn) {
-      document.querySelectorAll(".snippet-tab").forEach(b => b.classList.remove("active"));
+    function updateEstimate() {
+      const val = parseInt(document.getElementById("customAmount").value, 10) || 0;
+      const tokens = Math.round((val / 0.15) * 1000);
+      const images = Math.round(val / 200);
+      document.getElementById("quotaEstimate").innerHTML = 
+        `Estimasi: <span class="quota-highlight">~${tokens.toLocaleString('id-ID')} token</span> chat (Axynity-M1) atau <span class="quota-highlight">${images.toLocaleString('id-ID')} gambar</span> (Axynity-Image).`;
+    }
+
+    function setSnippet(lang, btn) {
+      document.querySelectorAll(".snippet-tab-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
-      document.getElementById("snippetContent").textContent = snippets[lang];
+      document.getElementById("snippetPre").textContent = codePresets[lang];
     }
 
     // Live API Tester
-    async function runLiveTest() {
-      const model = document.getElementById("testModel").value;
-      const prompt = document.getElementById("testPrompt").value.trim();
+    async function sendTestChat() {
+      const model = document.getElementById("modelChoice").value;
+      const prompt = document.getElementById("promptText").value.trim();
       if (!prompt) return;
 
-      const btn = document.getElementById("btnTestRun");
-      const out = document.getElementById("testOutput");
-      const latEl = document.getElementById("testLatency");
-      const tokEl = document.getElementById("testTokens");
+      const btn = document.getElementById("btnTest");
+      const out = document.getElementById("outputScreen");
+      const statusEl = document.getElementById("testStatus");
+      const tokenEl = document.getElementById("tokenCount");
 
       btn.disabled = true;
       btn.textContent = "...";
-      latEl.textContent = "Mengirim...";
-      out.textContent = "Menunggu respon dari server...";
+      statusEl.textContent = "Mengirim...";
+      out.textContent = "Menghubungi endpoint /v1/chat/completions...";
 
       const t0 = performance.now();
       try {
@@ -888,18 +1156,18 @@ async function tanyaAI(promptTeks, imageBase64 = null) {
         });
 
         const elapsed = Math.round(performance.now() - t0);
-        const json = await res.json();
+        const data = await res.json();
 
-        if (res.ok && json.choices && json.choices[0]) {
-          latEl.textContent = `${elapsed}ms (200 OK)`;
-          out.textContent = json.choices[0].message.content;
-          tokEl.textContent = `tokens: ${json.usage?.total_tokens || '-'}`;
+        if (res.ok && data.choices && data.choices[0]) {
+          statusEl.textContent = `200 OK • ${elapsed}ms`;
+          out.textContent = data.choices[0].message.content;
+          tokenEl.textContent = `tokens: ${data.usage?.total_tokens || '-'}`;
         } else {
-          latEl.textContent = `Error ${res.status}`;
-          out.textContent = json.error?.message || json.error || "Gagal memproses request";
+          statusEl.textContent = `Error ${res.status}`;
+          out.textContent = data.error?.message || data.error || "Gagal memproses request";
         }
       } catch (err) {
-        latEl.textContent = "Error";
+        statusEl.textContent = "Error";
         out.textContent = "Koneksi gagal: " + err.message;
       } finally {
         btn.disabled = false;
@@ -907,58 +1175,58 @@ async function tanyaAI(promptTeks, imageBase64 = null) {
       }
     }
 
-    // Checkout QRIS
-    async function triggerCheckout() {
-      const amount = parseInt(document.getElementById("nominalInput").value, 10);
-      if (!amount || amount < 5000) return alert("Minimal isi saldo adalah Rp 5.000");
+    // QRIS Payment
+    async function startQrisPayment() {
+      const amount = parseInt(document.getElementById("customAmount").value, 10);
+      if (!amount || amount < 5000) return alert("Nominal minimal adalah Rp 5.000");
 
       const modal = document.getElementById("qrisModal");
-      document.getElementById("stagePending").style.display = "block";
-      document.getElementById("stageSuccess").style.display = "none";
+      document.getElementById("viewWaiting").style.display = "block";
+      document.getElementById("viewSuccess").style.display = "none";
       modal.classList.add("show");
 
-      document.getElementById("amountDisplay").textContent = `Rp ${amount.toLocaleString('id-ID')}`;
-      document.getElementById("qrisImg").src = "";
-      document.getElementById("trxIdDisplay").textContent = "Membuat QRIS...";
+      document.getElementById("qrisTotal").textContent = `Rp ${amount.toLocaleString('id-ID')}`;
+      document.getElementById("qrImage").src = "";
+      document.getElementById("qrisTrxId").textContent = "Menyiapkan transaksi...";
 
       try {
         const res = await fetch("/api/qris/create", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount, plan: "standard", customer_name: "Web" })
+          body: JSON.stringify({ amount, plan: "standard", customer_name: "Developer" })
         });
         const data = await res.json();
         if (data.success && data.data) {
-          activeTrx = data.data.transaction_id;
-          document.getElementById("trxIdDisplay").textContent = activeTrx;
-          document.getElementById("qrisImg").src = data.data.qris_image || data.data.qr_url;
+          activeTrxId = data.data.transaction_id;
+          document.getElementById("qrisTrxId").textContent = activeTrxId;
+          document.getElementById("qrImage").src = data.data.qris_image || data.data.qr_url;
 
-          startCountdown(15 * 60);
-          startPoll(activeTrx);
+          runCountdown(15 * 60);
+          runPolling(activeTrxId);
         } else {
           alert("Gagal membuat QRIS: " + (data.error || "Coba beberapa saat lagi"));
-          closeModal();
+          closePaymentModal();
         }
-      } catch (e) {
-        alert("Koneksi gagal: " + e.message);
-        closeModal();
+      } catch (err) {
+        alert("Koneksi gagal: " + err.message);
+        closePaymentModal();
       }
     }
 
-    function closeModal() {
+    function closePaymentModal() {
       document.getElementById("qrisModal").classList.remove("show");
-      if (pollInterval) clearInterval(pollInterval);
-      if (timerInterval) clearInterval(timerInterval);
+      if (pollHandle) clearInterval(pollHandle);
+      if (timerHandle) clearInterval(timerHandle);
     }
 
-    function startCountdown(sec) {
-      if (timerInterval) clearInterval(timerInterval);
+    function runCountdown(sec) {
+      if (timerHandle) clearInterval(timerHandle);
       let r = sec;
-      const el = document.getElementById("timerText");
-      timerInterval = setInterval(() => {
+      const el = document.getElementById("countdown");
+      timerHandle = setInterval(() => {
         r--;
         if (r <= 0) {
-          clearInterval(timerInterval);
+          clearInterval(timerHandle);
           el.textContent = "EXPIRED";
           return;
         }
@@ -968,73 +1236,77 @@ async function tanyaAI(promptTeks, imageBase64 = null) {
       }, 1000);
     }
 
-    function startPoll(trxId) {
-      if (pollInterval) clearInterval(pollInterval);
-      pollInterval = setInterval(async () => {
+    function runPolling(trxId) {
+      if (pollHandle) clearInterval(pollHandle);
+      pollHandle = setInterval(async () => {
         try {
           const res = await fetch(`/api/qris/status?transaction_id=${trxId}`);
           const json = await res.json();
           if (json.paid && json.api_key) {
-            clearInterval(pollInterval);
-            clearInterval(timerInterval);
-            onPaid(json.api_key);
+            clearInterval(pollHandle);
+            clearInterval(timerHandle);
+            handleSuccess(json.api_key);
           }
         } catch (e) {}
       }, 3000);
     }
 
-    async function manualCheckPayment() {
-      if (!activeTrx) return;
+    async function forceCheckPayment() {
+      if (!activeTrxId) return;
       try {
-        const res = await fetch(`/api/qris/status?transaction_id=${activeTrx}&confirm=1`);
+        const res = await fetch(`/api/qris/status?transaction_id=${activeTrxId}&confirm=1`);
         const json = await res.json();
         if (json.paid && json.api_key) {
-          if (pollInterval) clearInterval(pollInterval);
-          if (timerInterval) clearInterval(timerInterval);
-          onPaid(json.api_key);
+          if (pollHandle) clearInterval(pollHandle);
+          if (timerHandle) clearInterval(timerHandle);
+          handleSuccess(json.api_key);
         } else {
           alert(json.message || "Pembayaran belum terdeteksi.");
         }
-      } catch (e) {
-        alert("Gagal mengecek: " + e.message);
+      } catch (err) {
+        alert("Gagal: " + err.message);
       }
     }
 
-    function onPaid(key) {
-      createdKey = key;
+    function handleSuccess(key) {
+      resultingKey = key;
       localStorage.setItem("axy_active_key", key);
-      document.getElementById("stagePending").style.display = "none";
-      document.getElementById("stageSuccess").style.display = "block";
-      document.getElementById("newKeyText").textContent = key;
+      document.getElementById("viewWaiting").style.display = "none";
+      document.getElementById("viewSuccess").style.display = "block";
+      document.getElementById("outputKeyText").textContent = key;
+      try {
+        confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
+      } catch (e) {}
     }
 
-    function copyKey() {
-      navigator.clipboard.writeText(createdKey);
-      alert("API Key berhasil disalin.");
+    function copyGeneratedKey() {
+      navigator.clipboard.writeText(resultingKey);
+      alert("API Key berhasil disalin ke clipboard!");
     }
 
     // Key Verifier
-    async function checkKeyStatus() {
-      const key = document.getElementById("verifyKeyInput").value.trim();
-      const resEl = document.getElementById("verifyResult");
+    async function verifyKey() {
+      const key = document.getElementById("keyInput").value.trim();
+      const fb = document.getElementById("keyFeedback");
       if (!key) return;
 
-      resEl.style.display = "block";
-      resEl.textContent = "Mengecek ke server...";
+      fb.style.display = "block";
+      fb.style.color = "var(--text-dim)";
+      fb.textContent = "Memverifikasi...";
 
       try {
         const res = await fetch(`/api/keys?key=${key}`);
         const data = await res.json();
         if (res.ok && data.success) {
-          resEl.style.color = "var(--green)";
-          resEl.textContent = `Status: Aktif | Plan: ${data.data?.plan || 'Standard'} | Owner: ${data.data?.owner || 'Customer'}`;
+          fb.style.color = "var(--emerald)";
+          fb.textContent = `Key Valid & Aktif | Plan: ${data.data?.plan || 'Standard'} | Owner: ${data.data?.owner || 'Customer'}`;
         } else {
-          resEl.style.color = "#dc2626";
-          resEl.textContent = "API Key tidak valid atau tidak terdaftar.";
+          fb.style.color = "#dc2626";
+          fb.textContent = "API Key tidak valid atau tidak terdaftar.";
         }
       } catch (e) {
-        resEl.style.color = "#dc2626";
-        resEl.textContent = "Gagal menghubungi server.";
+        fb.style.color = "#dc2626";
+        fb.textContent = "Gagal menghubungi server.";
       }
     }
   </script>
