@@ -1029,6 +1029,255 @@
       from { opacity: 0; }
       to { opacity: 1; }
     }
+
+    /* Hamburger Menu Button */
+    .hamburger-btn {
+      display: none;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px;
+      cursor: pointer;
+      flex-direction: column;
+      gap: 4px;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      transition: all 0.2s ease;
+    }
+
+    .hamburger-btn span {
+      display: block;
+      width: 18px;
+      height: 2px;
+      background: var(--text);
+      border-radius: 2px;
+      transition: all 0.2s ease;
+    }
+
+    .hamburger-btn.open span:nth-child(1) {
+      transform: translateY(6px) rotate(45deg);
+    }
+    .hamburger-btn.open span:nth-child(2) {
+      opacity: 0;
+    }
+    .hamburger-btn.open span:nth-child(3) {
+      transform: translateY(-6px) rotate(-45deg);
+    }
+
+    .mobile-nav-panel {
+      display: none;
+      background: rgba(255, 255, 255, 0.98);
+      backdrop-filter: blur(16px);
+      border-top: 1px solid var(--border);
+      padding: 16px 24px 24px;
+      flex-direction: column;
+      gap: 6px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+      animation: fadeInDown 0.2s ease-out;
+    }
+
+    .mobile-nav-panel.open {
+      display: flex;
+    }
+
+    .mobile-nav-link {
+      color: var(--text);
+      font-size: 0.9375rem;
+      font-weight: 600;
+      text-decoration: none;
+      padding: 10px 0;
+      border-bottom: 1px solid #f4f4f5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .mobile-nav-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .table-scroll-hint {
+      display: none;
+    }
+
+    /* Mobile Responsive Media Queries */
+    @media (max-width: 820px) {
+      .hamburger-btn {
+        display: flex;
+      }
+      .site-nav .status-badge {
+        display: none;
+      }
+      .site-nav .btn-secondary {
+        display: none;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .hero {
+        padding: 48px 0 36px;
+      }
+      .hero-title {
+        font-size: 2.15rem;
+        line-height: 1.18;
+      }
+      .hero-lead {
+        font-size: 0.9375rem;
+        margin-bottom: 24px;
+      }
+      .hero-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        margin-bottom: 32px;
+      }
+      .hero-actions .btn {
+        width: 100%;
+      }
+      .cmd-badge {
+        width: 100%;
+        justify-content: space-between;
+        box-sizing: border-box;
+      }
+      .metric-strip {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-top: 32px;
+      }
+      .metric-card {
+        padding: 14px 16px;
+      }
+      .metric-value {
+        font-size: 1.35rem;
+      }
+      .section {
+        padding: 56px 0;
+      }
+      .section-heading {
+        font-size: 1.75rem;
+      }
+      .workbench-topbar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px 16px;
+      }
+      .tab-group {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        flex-wrap: nowrap;
+        padding: 4px;
+      }
+      .tab-btn {
+        flex-shrink: 0;
+      }
+      .workbench-editor, .workbench-output {
+        padding: 18px 16px;
+      }
+      .code-editor, .code-response {
+        font-size: 0.75rem;
+        line-height: 1.55;
+      }
+      .table-card {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .table-scroll-hint {
+        display: block;
+        font-family: var(--font-mono);
+        font-size: 0.6875rem;
+        color: var(--text-dim);
+        text-align: center;
+        padding: 8px 12px;
+        background: #fafafa;
+        border-bottom: 1px solid var(--border);
+      }
+      .catalog-table th, .catalog-table td {
+        padding: 12px 14px;
+        white-space: nowrap;
+      }
+      .pricing-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      .pricing-card {
+        padding: 24px 20px;
+      }
+      .custom-bar {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 20px 18px;
+        gap: 14px;
+      }
+      .custom-bar > div {
+        width: 100%;
+      }
+      .custom-bar > div:last-child {
+        flex-direction: column;
+        width: 100%;
+      }
+      .custom-input {
+        width: 100%;
+      }
+      .custom-bar button {
+        width: 100%;
+      }
+      .footer-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 16px;
+      }
+      .footer-links {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 16px;
+      }
+      .modal-window {
+        width: 95%;
+        max-width: 380px;
+        padding: 24px 18px;
+      }
+      .qris-display {
+        padding: 14px;
+        margin: 14px 0;
+      }
+      .qris-display img {
+        width: 190px;
+        height: 190px;
+      }
+      .qris-nominal {
+        font-size: 1.3rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .hero-title {
+        font-size: 1.85rem;
+      }
+      .pill-eyebrow {
+        font-size: 0.6875rem;
+        padding: 4px 10px;
+      }
+      .metric-strip {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .metric-card {
+        padding: 12px;
+      }
+      .metric-value {
+        font-size: 1.2rem;
+      }
+      .metric-label {
+        font-size: 0.625rem;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1058,6 +1307,24 @@
         </div>
         <a href="/studio" class="btn btn-secondary">Console Studio</a>
         <button class="btn btn-primary" onclick="scrollToSection('pricing')">Beli API Key</button>
+        <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleMobileNav()" aria-label="Toggle Navigation">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Navigation Drawer -->
+    <div class="mobile-nav-panel" id="mobileNavPanel">
+      <a href="#workbench" class="mobile-nav-link" onclick="closeMobileNav()">Quickstart</a>
+      <a href="#models" class="mobile-nav-link" onclick="closeMobileNav()">Model AI</a>
+      <a href="#pricing" class="mobile-nav-link" onclick="closeMobileNav()">Harga (QRIS)</a>
+      <a href="/studio" class="mobile-nav-link" onclick="closeMobileNav()">Playground Studio &rarr;</a>
+      <a href="#faq" class="mobile-nav-link" onclick="closeMobileNav()">FAQ</a>
+      <div class="mobile-nav-actions">
+        <a href="/studio" class="btn btn-secondary" style="width: 100%;">Console Studio</a>
+        <button class="btn btn-primary" onclick="closeMobileNav(); scrollToSection('pricing');" style="width: 100%;">⚡ Beli API Key via QRIS</button>
       </div>
     </div>
   </header>
@@ -1187,6 +1454,7 @@
         </div>
 
         <div class="table-card">
+          <div class="table-scroll-hint">← Geser tabel ke kanan / kiri untuk melihat spesifikasi lengkap →</div>
           <table class="catalog-table">
             <thead>
               <tr>
@@ -1425,6 +1693,20 @@
   </div>
 
   <script>
+    function toggleMobileNav() {
+      const btn = document.getElementById('hamburgerBtn');
+      const panel = document.getElementById('mobileNavPanel');
+      btn.classList.toggle('open');
+      panel.classList.toggle('open');
+    }
+
+    function closeMobileNav() {
+      const btn = document.getElementById('hamburgerBtn');
+      const panel = document.getElementById('mobileNavPanel');
+      if (btn) btn.classList.remove('open');
+      if (panel) panel.classList.remove('open');
+    }
+
     let activeTrxId = null;
     let pollTimer = null;
     let countTimer = null;
