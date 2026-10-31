@@ -1,5 +1,3 @@
-import { get } from '@vercel/global-config';
-
 // Menggunakan environment variable untuk token rahasia
 const BUATQRIS_SECRET = process.env.BUATQRIS_SECRET_TOKEN || process.env.NINEROUTER_KEY || "axy-signature-salt-2026";
 
@@ -19,8 +17,13 @@ export async function verifyApiKey(clientApiKey) {
   if (!clientApiKey || typeof clientApiKey !== 'string') return null;
   const key = clientApiKey.trim();
 
-  // 1. Static Sandbox Key
-  if (key === 'axy-live-sandbox' || key === (globalThis.atob ? globalThis.atob('YXh5LWtleS10ZXMxMjM=') : Buffer.from('YXh5LWtleS10ZXMxMjM=', 'base64').toString())) {
+  // 1. Static Sandbox Key & Key Tes (Mendukung axy-key-tes123 dan tes-axy-key123)
+  if (
+    key === 'axy-live-sandbox' || 
+    key === 'axy-key-tes123' ||
+    key === 'tes-axy-key123' ||
+    key === (globalThis.atob ? globalThis.atob('YXh5LWtleS10ZXMxMjM=') : Buffer.from('YXh5LWtleS10ZXMxMjM=', 'base64').toString())
+  ) {
     return { active: true, plan: 'sandbox', quota: 999999, owner: 'developer' };
   }
 
@@ -47,15 +50,18 @@ export async function verifyApiKey(clientApiKey) {
     }
   }
 
-  // 3. Fallback: Edge Config lookup
-  try {
-    const keyData = await get(key);
-    if (keyData !== undefined && keyData !== null && keyData !== false) {
-      if (typeof keyData === 'object') return keyData;
-      return { active: true, plan: 'custom', owner: String(keyData) };
+  // 3. Fallback: Edge Config lookup (Hanya jika env tersedia agar tidak crash di Edge Runtime)
+  if (process.env.EDGE_CONFIG || process.env.GLOBAL_CONFIG) {
+    try {
+      const { get } = await import('@vercel/global-config');
+      const keyData = await get(key);
+      if (keyData !== undefined && keyData !== null && keyData !== false) {
+        if (typeof keyData === 'object') return keyData;
+        return { active: true, plan: 'custom', owner: String(keyData) };
+      }
+    } catch (e) {
+      // Edge Config lookup failed or not set
     }
-  } catch (e) {
-    // Edge Config lookup failed or not set
   }
 
   return null;
